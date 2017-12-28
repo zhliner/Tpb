@@ -1,0 +1,64 @@
+/** framework/pb.css 2013.08.28. Tpb.Base
+ * ========================================================
+ *  PB 样式定义
+ *  - 在这里定义样式可以实现CSS特效；
+ *  - 与基础PB系定义匹配使用（对元素data-pb属性的操作）；
+ *  - 各谓词独占一个行为，故以参数形式出现 [attr|=word]；
+ *
+ *  理解
+ *  - PB参数：是什么
+ *  - PB选项：做什么
+ *
+ *  标签结构
+ *  - 菜单：	menu/li
+ *  - 子菜单：	li/menu/li
+ *
+ *  Author: 风林子 zhliner@gmail.com
+ * ========================================================
+ */
+
+
+/* 通用显示 */
+*[data-pb] {
+    opacity: 1;
+    transition-property: opacity;
+    transition-duration: 0.22s;
+}
+
+
+/* 折叠 */
+*[data-pb~='fold'] > * {
+    display: none !important;
+}
+
+/* 隐藏 */
+*[data-pb~='hide'] {
+    visibility: hidden !important;
+    opacity: 0;
+}
+
+/* 消失 */
+*[data-pb~='lose'] {
+    display: none !important;
+}
+
+/* 条目冻结 */
+*[data-pb~='disabled'] {
+    color: #888 !important;
+}
+
+
+/* 子菜单：弹出/收回 */
+*[data-pb|='menu-sub'] {
+	position: relative;
+}
+
+*[data-pb~='unpop'] > menu {
+    display: none !important;
+}
+
+
+/* 标签 */
+*[data-pb|='tab'] {
+    font-weight: bold;
+}
