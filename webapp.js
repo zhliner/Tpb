@@ -1,4 +1,4 @@
-/* $Id: app.js 2017.02.13 Tpb.Base $
+/* $Id: webapp.js 2017.02.13 Tpb.Base $
 *******************************************************************************
 			Copyright (c) 铁皮工作室 2017 MIT License
 
@@ -32,11 +32,10 @@
 	// 便捷引用
 	//
 	const
-		Util = T.Kits.Util,
-		App = T.App;
+		Util = T.Kits.Util;
 
 
-class WebApp extends App {
+class WebApp extends T.Base {
 	/**
 	 * @param {Object} plates 板块集（总根）
 	 */

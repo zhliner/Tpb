@@ -17,7 +17,7 @@
 		Plater 		辅助：板块载入器
 		Render 		辅助：渲染器
 
-		App 		应用：基类
+		Base 		应用：基类
 		Taker 		应用：数据侍者/动态页（小App）
 		WebApp 		应用：全功能App（4分层，类似MVC）
 
@@ -51,6 +51,7 @@ const Tpb = {
 	TplBase: 	null, 	// Class/Base Class
 	Templater: 	null, 	// Class
 	Localer: 	null, 	// Class
+	Plater: 	null, 	// Class
 
 
 	// 渲染器：{
@@ -62,12 +63,12 @@ const Tpb = {
 	Render: null,
 
 
-	App: 	null, 	// Base Class
+	Base: 	null, 	// Base Class
 	Taker: 	null, 	// Class
 	WebApp: null, 	// Class
 
 
-	Easing: {},  // 缓动函数库
+	Easing: {},  	// 缓动函数库
 
 
 	/**
@@ -96,8 +97,9 @@ const Tpb = {
 
 
 /**
- * 私有存储生成器。
- * 可在每个函数域内赋值为一个_，然后在类定义中_(this).xx取赋值。
+ * 创建私有存储器。
+ * 通常在顶层局部域内赋值为一个_，然后用 _(this).xx 取赋值。
+ * @returns {Function}
  */
 function Privater() {
     return function( self ) {
@@ -115,7 +117,7 @@ function Privater() {
 ///////////////////////////////////////////////////////////////////////////////
 
 const
-	_ = Privater(),  // 局域存储
+	_ = Privater(),  // 局域存储器
 
 	__tplName = 'tpl-name',  // 模板节点命名属性
 	__tplLoad = 'tpl-load',  // 模板节点载入属性名
@@ -297,8 +299,11 @@ Tpb.Templater = Tpb.TplBase = TplBase;
 
 let _Tpb = window.Tpb;
 
-Tpb.noConflict = function()
-{
+/**
+ * 恢复页面初始Tpb占用。
+ * @returns 当前Tpb对象
+ */
+Tpb.noConflict = function() {
 	if ( window.Tpb === Tpb ) window.Tpb = _Tpb;
 	return Tpb;
 };
