@@ -3,7 +3,7 @@ import { terser } from 'rollup-plugin-terser'
 export default {
     input: 'tpb.js',
     output: {
-        file: '../articlejs/base/tpb/tpb.min.js',
+        file: 'release/tpb.esm.js',
         format: 'esm',
         banner: '/*! Tpb/tQuery v0.4.0 | (c) zhliner@gmail.com 2021.10.26 | MIT License */',
         sourcemapExcludeSources: true,
