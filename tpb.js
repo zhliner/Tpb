@@ -10,7 +10,7 @@
 //
 //  Tpb {
 //      Init:{Function}     应用初始化
-//      build:{Function}    节点树构建（OBT&渲染语法）
+//      build:{Function}    节点树构建（OBT&渲染语法），需先执行上面的.Init()
 //      obtBuild:{Function} 单元素OBT构建
 //  }
 //  On 扩展：
