@@ -19,13 +19,10 @@ render( data?:Value ): Element
 // 注记：
 // 在By段定义此方法，是因为模板可能从远端获取，渲染之后需要插入（To）DOM中。
 
-Tpls( reset:Boolean ): Promise<void>
-// 载入模板配置。
-
-GET( path?:String ): Promise<json>
+GET( url, type?:String ): Promise<[type]>
 // 获取远端数据。
 
-POST( path, enctype:String ): Promise<json>
+POST( url, type?:String ): Promise<Response>
 // 向远端递送信息。
 ```
 

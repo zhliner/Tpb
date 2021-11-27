@@ -35,10 +35,6 @@ const
         // 模板映射集配置
         // 相对于上面模板根目录（tpldir）。
         tplmap: `maps.json`,
-
-        // 拉取数据根目录
-        // 注：相对于上面 base URL
-        pulls:  'xdata',
     };
 
 
