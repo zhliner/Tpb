@@ -14,7 +14,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
 
-import $, { Web, DataStore, TplsPool, ChainStore, DEBUG, TplrName } from "./config.js";
+import $, { DataStore, TplsPool, ChainStore, DEBUG, TplrName } from "./config.js";
 import { Util } from "./tools/util.js";
 import { Ease } from "./tools/ease.js";
 import { bindMethod } from "./base.js";
@@ -867,18 +867,17 @@ const _Gets = {
 
     /**
      * 创建URL对象。
-     * 目标：暂存区1项可选。
-     * 如果暂存区有值，视为定制的基础路径。
-     * 如果暂存区无值或为null，则取系统配置的URL基础路径。
-     * @data: String URL基础根（base）
-     * @param  {String} url 目标定位（相对或绝对）
+     * 目标：暂存区/栈顶1项。
+     * 注意base如果包含子路径，需要包含末尾的斜线/。
+     * @data: String 定位目标（相对或绝对）
+     * @param  {String} base 基础URL
      * @return {URL}
      */
-    URL( evo, url ) {
-        return new URL( url, evo.data == null ? Web.base : evo.data );
+    URL( evo, base ) {
+        return new URL( evo.data, base );
     },
 
-    __URL: -1,
+    __URL: 1,
 
 
     /**

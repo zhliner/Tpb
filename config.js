@@ -11,7 +11,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
 
-import { Loader } from "./tools/tloader.js";
+import { Loader, TplLoader } from "./tools/tloader.js";
 
 
 //
@@ -21,21 +21,13 @@ import { Loader } from "./tools/tloader.js";
 const
     DEBUG = true,
 
-    Web = {
-        // 应用URL根
-        // 如果是子路径，必须包含末尾斜线（/）。
-        // 注：仅针对下面3项配置。
-        base:   'http://localhost:8080/',
+    // 本系模板根URL
+    // 用于获取模板节点的Tpb接口，注意末尾的斜线/。
+    tplRoot = 'http://localhost:8080/templates/',
 
-
-        // 模板根目录
-        // 相对于上面 base URL
-        tpldir: 'templates',
-
-        // 模板映射集配置
-        // 相对于上面模板根目录（tpldir）。
-        tplmap: `maps.json`,
-    };
+    // 模板映射集配置
+    // 相对于上面的根路径URL。
+    tplMaps = 'maps.json';
 
 
 
@@ -53,6 +45,7 @@ const
     },
 
     // 本系模板管理器名称
+    // 上级应用默认的模板系名称用一个空串表示。
     TplrName = '';
 
 
@@ -92,8 +85,8 @@ const
     // { Element: Map{evn:String: Chain} }
     ChainStore = new WeakMap(),
 
-    // 通用载入器。
-    XLoader = new Loader( Web.base ),
+    // 本系模板管理器。
+    TLoader = new TplLoader( '', new Loader(tplRoot) ),
 
     // 模板管理器池。
     // 每一个独立模板系列对应一个模板管理器。
@@ -103,8 +96,7 @@ const
 
 
 /**
- * 添加本系模板管理器。
- * 注：编辑器自身的模板系列的域名称用一个空串表示。
+ * 存储本系模板管理器。
  * @param  {Templater} tplr 模板管理器
  * @return {Templater} tplr
  */
@@ -119,7 +111,7 @@ const tplInit = tplr => TplsPool.set( TplrName, tplr ) && tplr;
 
 export {
     DEBUG,
-    Web,
+    tplMaps,
     OBTA,
     TplrName,
     EXTENT,
@@ -130,7 +122,7 @@ export {
     Globals,
     DataStore,
     ChainStore,
-    XLoader,
+    TLoader,
     TplsPool,
     tplInit,
 };

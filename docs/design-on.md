@@ -176,7 +176,7 @@ jsons( space, replacer ): [String]
 JSON( reviver ): Object | Value
 // JSON 解析
 
-URL( url:String ): URL
+URL( base:String ): URL
 // 创建URL对象
 
 Date( ...args? ): Date

@@ -35,7 +35,7 @@ const $ = (this || window).$;
 export class Loader {
     /**
      * 末尾应当包含/
-     * @param {String} base Web路径跟
+     * @param {String} base Web路径根
      */
     constructor( base ) {
         // URL请求根
@@ -200,7 +200,7 @@ export class TplLoader {
     constructor( dir, loader ) {
         this._loader = loader;
 
-        if ( !dir.endsWith('/') ) {
+        if ( dir && !dir.endsWith('/') ) {
             dir += '/';
         }
         this._path = loader.base() + dir;
@@ -321,7 +321,7 @@ export class TplLoader {
      * map: {文件名: [节点名]}
      * 转换为：{节点名: 文件名}
      * @param  {Object} map 映射配置
-     * @return {Map} 节点/文件映射集
+     * @return {Map} 节点名/文件名映射集
      */
     _config( map ) {
         for ( const [file, names] of Object.entries(map) ) {

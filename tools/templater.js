@@ -21,8 +21,8 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
 
-import { OBTA, XLoader } from "../config.js";
-import { TplLoader } from "./tloader.js";
+import { OBTA } from "../config.js";
+import { obtAttr } from "../base.js";
 import { Render } from "./render.js";
 
 
@@ -53,16 +53,8 @@ const
     __nameSlr   = `[${__tplName}]`,
     __nodeSlr   = `[${__tplNode}], [${__tplSource}]`,
 
-
-    // obt-src并列分隔符。
-    // 各部分路径独立（都相对于根路径）。
-    __sepPath = ',',
-
     // OBT属性选择器
-    __obtSlr = `[${OBTA.on}], [${OBTA.src}]`,
-
-    // OBT名称序列。
-    __obtName = `${OBTA.on} ${OBTA.by} ${OBTA.to} ${OBTA.src}`;
+    __obtSlr    = `[${OBTA.on}], [${OBTA.src}]`;
 
 
 
@@ -70,12 +62,12 @@ class Templater {
     /**
      * 创建实例。
      * @param {Builder} obter OBT构建器
-     * @param {String} dir 模板根目录（相对于安装根）
+     * @param {TplLoader} loader 模板载入器
      * @param {Map} buf 共享节点存储区，可选
      */
-    constructor( obter, dir, buf ) {
+    constructor( obter, loader, buf ) {
         this._obter = obter;
-        this._loader = new TplLoader( dir, XLoader );
+        this._loader = loader;
         this._tpls = buf || new Map();
 
         // 临时存储（就绪后移除）
@@ -161,11 +153,14 @@ class Templater {
 
     /**
      * 模板构建。
+     * file仅在实时导入时有意义，
+     * 用于清除文件对应的模板节点配置（载入&解析完毕后）。
      * @param  {Element|Document|DocumentFragment} root 构建目标
-     * @return {Promise<(true)>}
+     * @param  {String} file 文档片段对应的文件名，可选
+     * @return {Promise<this:Templater>}
      */
-    build( root ) {
-        return this._build( root );
+    build( root, file ) {
+        return this._build( root, file ).then( () => this );
     }
 
 
@@ -216,10 +211,10 @@ class Templater {
      * 注记：
      * 模板管理器与节点配置紧密相关，所以应当可以在此配置。
      * @param  {String|URL|Object} maps 映射文件或配置对象
-     * @return {Promise<Map>}
+     * @return {Promise<this>}
      */
     config( maps ) {
-        return this._loader.config( maps || {} );
+        return this._loader.config( maps || {} ).then( () => this );
     }
 
 
@@ -234,9 +229,9 @@ class Templater {
      * 参数file仅用于清理自动载入器内的配置存储。
      * @param  {Element|Document|DocumentFragment} root 构建目标
      * @param  {String} file 文档片段对应的文件名，可选
-     * @return {Promise<(true)>}
+     * @return {Promise<Boolean>}
      */
-    _build( root, file ) {
+    _build( root, file = false ) {
         if ( this._pool.has(root) ) {
             return this._pool.get(root);
         }
@@ -246,7 +241,8 @@ class Templater {
         let _pro = this._buildx( root )
             .then( () => this.tpls(root) )
             .then( () => this._pool.delete(root) )
-            .then( () => !file || !this._loader.clean(file) );
+            // 配置清理节约内存。
+            .then( () => file && !this._loader.clean(file) );
 
         this._pool.set( root, _pro );
 
@@ -375,63 +371,6 @@ class Templater {
     }
 
 
-    //
-    // OBT定义提取和处理
-    ///////////////////////////////////////////////////////
-
-
-    /**
-     * 取OBT特性值。
-     * @param  {Element} el 取值元素
-     * @return {Object3}
-     */
-    _obtattr( el ) {
-        return {
-            on: $.attr(el, OBTA.on) || '',
-            by: $.attr(el, OBTA.by) || '',
-            to: $.attr(el, OBTA.to) || '',
-        };
-    }
-
-
-    /**
-     * 从远端载入OBT配置。
-     * 支持逗号分隔的多目标并列导入，如：obt-src="obts/aaa.json, obts/bbb.json"。
-     * 路径相对于模板根目录。
-     * @param  {String} src 源定义
-     * @return {[Promise<Object3>]}
-     */
-    _obtjson( src ) {
-        return src
-            .split( __sepPath )
-            .map( path => this._loader.json(path) );
-    }
-
-
-    /**
-     * 获取目标元素的OBT配置。
-     * - 本地配置优先，因此会先绑定本地定义。
-     * - 会移除元素上的OBT配置属性，如果需要请预先取出。
-     * @param  {Element} el 目标元素
-     * @return {[Promise<Object3>]} OBT配置<{on, by, to}>
-     */
-    _obtall( el ) {
-        let _buf = [];
-
-        // 本地配置先处理。
-        if ( el.hasAttribute(OBTA.on) ) {
-            _buf.push( this._obtattr(el) );
-        }
-        // 外部配置。
-        if ( el.hasAttribute(OBTA.src) ) {
-            _buf.push( ...this._obtjson($.attr(el, OBTA.src)) )
-        }
-        $.removeAttr( el, __obtName );
-
-        return Promise.all( _buf );
-    }
-
-
     /**
     * 节点树OBT构建。
     * 仅OBT处理，不包含渲染语法的解析。
@@ -444,7 +383,7 @@ class Templater {
 
         for ( const el of $.find(__obtSlr, root, true) ) {
             _buf.push(
-                this._obtall( el )
+                obtAttr( el, this._loader )
                 .then( obts => obts.forEach(obt => this._obter.build(el, obt)) )
             );
         }

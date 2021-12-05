@@ -9,9 +9,9 @@
 //  基础定义集。
 //
 //  Tpb {
-//      Init:{Function}     应用初始化
-//      build:{Function}    节点树构建（OBT&渲染语法），需先执行上面的.Init()
-//      obtBuild:{Function} 单元素OBT构建
+//      init(): Templater   应用初始化。
+//      build(): Element    元素自身的OBT构建（不含渲染语法，不含子元素）。
+//      templater(): Templater|Boolean|void 模板管理器存储/获取/移除。
 //  }
 //  On 扩展：
 //      customGetter
@@ -20,6 +20,11 @@
 //      processExtend
 //      processProxy
 //      cmvApp
+//
+//  使用：
+//      Tpb.init( ... )
+//      .config( tplmap )   // 模板文件：节点名配置
+//      .then( tplr => tplr.build(root) );  // 构建节点树（OBT、渲染语法）
 //
 //  支持：
 //  - 子模板系列自动动态导入（根据 文件:节点名 配置）。
@@ -33,19 +38,12 @@ import { On } from "./pbs.get.js";
 import { By } from "./pbs.by.js";
 import { To } from "./pbs.to.js";
 
-import $, { DEBUG, XLoader, Web, tplInit, DataStore } from "./config.js";
-import { storeChain, hostSet, namedExtend, deepExtend, funcSets } from "./base.js";
+import $, { DEBUG, TLoader, tplInit, DataStore, TplsPool, TplrName } from "./config.js";
+import { storeChain, hostSet, namedExtend, deepExtend, funcSets, obtAttr } from "./base.js";
 import { App } from "./app.js";
 import { Builder } from "./core.js";
 
 import { Templater } from "./tools/templater.js";
-
-
-//
-// 本系模板管理器。
-// 即应用中未命名的模板域对应的默认模板管理器。
-//
-let __Tpls = null;
 
 
 //
@@ -82,11 +80,11 @@ function namedTpls( files, sort ) {
     files.forEach( f => _buf.set(f, null) );
 
     // 避免之前构建影响。
-    XLoader.clear();
+    TLoader.clear();
 
     Promise.all(
         files.map( f =>
-            XLoader.node(`${Web.tpldir}/${f}`)
+            TLoader.node( f )
             .then( frag => $.find('[tpl-name]', frag).map(el => $.attr(el, 'tpl-name')) )
             .then( ns => _buf.set(f, sort ? orderList(ns) : ns) )
         )
@@ -272,51 +270,62 @@ function obtBuilder( on = On, by = By ) {
 
 /**
  * 单元素OBT构建。
- * 可用于即时测试外部的OBT配置，或构建无法直接定义OBT的对象（如Documet）。
- * 仅OBT处理，不包含渲染语法的解析。
- * 如果没有传递ob定义集，则默认支持基础OnBy方法集。
+ * 仅 OBT 处理，不包含渲染语法的解析。
+ * 常用于即时测试 OBT 配置，配置可由实参传入（如针对 documet）。
+ * 注意：
+ * - conf通过实参传入时不支持obt-src定义，此时返回元素本身。
+ * - 如果conf实参为假，会对元素上的OBT特性进行解析（支持obt-src），
+ *   此时返回的是一个承诺，承诺传递元素本身。
+ * - 如果obt-src引用的是默认模板根之外的位置，需要传递一个模板载入器。
  * @param  {Element} el 目标元素
- * @param  {Object} conf OBT配置对象（{on, by, to}）
- * @param  {Object} ob On/By方法集，可选。默认全局On/By定义集
- * @return {Element} el
+ * @param  {Object|null} conf OBT配置对象（{on, by, to}），可选
+ * @param  {Object} on On方法集，可选。默认全局On定义集
+ * @param  {Object} by By方法集，可选。默认全局By定义集
+ * @param  {TplLoader} loader 模板载入器，可选
+ * @return {Element|Promise<Element>}
  */
-function obtBuild( el, conf, ob = {} ) {
-    return obtBuilder( ob.on, ob.by ).build( el, conf );
+function build( el, conf, on, by, loader = TLoader ) {
+    let _obter = obtBuilder( on, by );
+
+    if ( conf ) {
+        return _obter.build( el, conf );
+    }
+    return obtAttr( el, loader ).then( obts => obts.forEach(obt => _obter.build(el, obt)) || el );
 }
 
 
 /**
  * Tpb初始化。
- * 设置全局模板管理器，在一个应用启动之前调用。
- * 强制模板存放在默认配置的目录内（Web.tpldir）。
+ * 创建并存储本系On/By集的模板管理器。
+ * 需在目标应用启动之前调用。
  * @param  {Object} on On定义集，可选
  * @param  {Object} by By定义集，可选
- * @return {void}
+ * @param  {TplLoader} loader 模板载入器，可选
+ * @return {Templater} On/By集的模板管理器实例
 */
-function Init( on, by ) {
-    __Tpls = tplInit( new Templater(obtBuilder(on, by), Web.tpldir) );
+function init( on, by, loader = TLoader ) {
+    return tplInit( new Templater(obtBuilder(on, by), loader) );
 }
 
 
 /**
- * 通用OBT全构建。
- * 包括节点树内引入的子模版的连锁解析构建（tplr）。
- * 可用于DOM节点和可绑定事件的普通对象（如window）。
- * - 单纯传递 root 可用于页面中既有OBT构建（没有子模版逻辑）。
- * - 如果 root 中包含模板语法且需要引入外部子模版，则 conf 是必需的。
- * - 如果模板存放在非默认目录内，可以传递一个自定义的模板管理器实例（tplr）。
- * 注意：
- * conf为子模板配置对象时，格式参考 templates/maps.json。
- * 如果没有自定义的模板管理器，则需要先初始化默认的模板管理器（.Init()）。
- * 返回的承诺对象承诺了根元素及其子模板内的所有构建。
- * @param  {Element|Document|Object} root 根容器或处理对象
- * @param  {String|Object} conf 模板节点配置文件或配置对象，可选
- * @param  {Templater} tplr 模板管理器实例，可选
- * @return {Promise<void>}
+ * 存储/获取目标模板管理器。
+ * 如果传递模板管理器实例则为存储，否则为获取。
+ * 如果name实参无值，视为获取本系模板的模板管理器（.init()之后有效）。
+ * 如果tplr传递null值，表示移除该存储，
+ * 此时返回值表示移除成功与否。
+ * @param  {String} name 模板管理器名称，可选
+ * @param  {Templater|null} tplr 模板管理器实例，可选
+ * @return {Templater|Boolean|void}
  */
-function build( root, conf, tplr ) {
-    tplr = tplr || __Tpls;
-    return tplr.config( conf ).then( () => tplr.build(root) );
+function templater( name, tplr ) {
+    if ( tplr === undefined ) {
+        return TplsPool.get( name || TplrName );
+    }
+    if ( tplr === null ) {
+        return TplsPool.delete( name );
+    }
+    TplsPool.set( name, tplr );
 }
 
 
@@ -336,4 +345,4 @@ export {
     obtBuilder,
 };
 
-export const Tpb = { Init, build, obtBuild };
+export const Tpb = { init, build, templater };
