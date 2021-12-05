@@ -5,7 +5,7 @@ export default {
     output: {
         file: 'release/tpb.esm.js',
         format: 'esm',
-        banner: '/*! Tpb/tQuery v0.4.0 | (c) zhliner@gmail.com 2021.10.26 | MIT License */',
+        banner: '/*! Tpb/tQuery v0.4.1 | (c) zhliner@gmail.com 2021.12.05 | MIT License */',
         sourcemapExcludeSources: true,
     },
     plugins: [

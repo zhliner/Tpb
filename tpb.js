@@ -39,11 +39,11 @@ import { By } from "./pbs.by.js";
 import { To } from "./pbs.to.js";
 
 import $, { DEBUG, TLoader, tplInit, DataStore, TplsPool, TplrName } from "./config.js";
-import { storeChain, hostSet, namedExtend, deepExtend, funcSets, obtAttr } from "./base.js";
+import { storeChain, hostSet, namedExtend, deepExtend, funcSets } from "./base.js";
 import { App } from "./app.js";
 import { Builder } from "./core.js";
 
-import { Templater } from "./tools/templater.js";
+import { Templater, obtAttr } from "./tools/templater.js";
 
 
 //

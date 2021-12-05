@@ -1,8 +1,8 @@
-//! $ID: config.js 2019.09.28 Tpb.Config $
+//! $ID: config.js 2021.12.25 Tpb.Config $
 // +++++++++++++++++++++++++++++++++++++++++
-//  Project: Tpb v0.4.0
+//  Project: Tpb v0.4.1
 //  E-Mail:  zhliner@gmail.com
-//  Copyright (c) 2019 - 2020 铁皮工作室  MIT License
+//  Copyright (c) 2021 铁皮工作室  MIT License
 //
 //////////////////////////////////////////////////////////////////////////////
 //
@@ -85,7 +85,7 @@ const
     // { Element: Map{evn:String: Chain} }
     ChainStore = new WeakMap(),
 
-    // 本系模板管理器。
+    // 本系模板载入器。
     TLoader = new TplLoader( '', new Loader(tplRoot) ),
 
     // 模板管理器池。

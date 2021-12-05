@@ -12,7 +12,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
 
-import $, { OBTA, ACCESS, EXTENT, ChainStore } from "./config.js";
+import $, { ACCESS, EXTENT, ChainStore } from "./config.js";
 
 
 //
@@ -212,75 +212,6 @@ function namedExtend( name, obj, methods, n, base ) {
 
 
 //
-// OBT定义提取和处理
-///////////////////////////////////////////////////////
-
-const
-    // obt-src并列分隔符。
-    // 各部分路径独立（都相对于根路径）。
-    __sepPath = ',',
-
-    // OBT名称序列。
-    __obtName = `${OBTA.on} ${OBTA.by} ${OBTA.to} ${OBTA.src}`;
-
-
-/**
- * 取OBT特性值。
- * @param  {Element} el 取值元素
- * @return {Object3}
- */
-function _obtattr( el ) {
-    return {
-        on: $.attr( el, OBTA.on ) || '',
-        by: $.attr( el, OBTA.by ) || '',
-        to: $.attr( el, OBTA.to ) || '',
-    };
-}
-
-
-/**
- * 从远端载入OBT配置。
- * 支持逗号分隔的多目标并列导入，如：obt-src="obts/aaa.json, obts/bbb.json"。
- * 路径相对于模板载入器内的根目录。
- * @param  {String} src 源定义
- * @param  {TplLoader} loader 模板载入器
- * @return {[Promise<Object3>]}
- */
-function _obtjson( src, loader ) {
-    return src
-        .split( __sepPath )
-        .map( path => loader.json(path) );
-}
-
-
-/**
- * 获取目标元素的OBT配置。
- * - 本地配置优先，因此会先绑定本地定义。
- * - 会移除元素上的OBT配置属性，如果需要请预先取出。
- * 注意：
- * 如果需要解析obt-src特性，需要传递模板载入器loader。
- * @param  {Element} el 目标元素
- * @param  {TplLoader} loader 模板载入器，可选
- * @return {[Promise<Object3>]} OBT配置<{on, by, to}>
- */
-function obtAttr( el, loader ) {
-    let _buf = [];
-
-    // 本地配置先处理。
-    if ( el.hasAttribute(OBTA.on) ) {
-        _buf.push( _obtattr(el) );
-    }
-    // 外部配置。
-    if ( el.hasAttribute(OBTA.src) ) {
-        _buf.push( ..._obtjson($.attr(el, OBTA.src), loader) )
-    }
-    $.removeAttr( el, __obtName );
-
-    return Promise.all( _buf );
-}
-
-
-//
 // 导出。
 //////////////////////////////////////////////////////////////////////////////
 
@@ -294,5 +225,4 @@ export {
     deepExtend,
     namedExtend,
     storeChain,
-    obtAttr,
 };
