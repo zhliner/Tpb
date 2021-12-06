@@ -57,18 +57,21 @@ const _By = {
      * 数据获取。
      * 目标：暂存区1项可选。
      * 数据类型名（type）指对响应数据的提取方法：
+     * - json
+     * - text
      * - arrayBuffer
      * - blob
      * - formData
-     * - json       默认类型
-     * - text
      * @data: 请求配置对象（init）
-     * @param  {String|URL} url 远端处理器
-     * @param  {String} type 获取的数据类型名，可选
+     * @param  {String} type 获取的数据类型名
+     * @param  {String|URL} url 远端资源定位
      * @return {Promise<[type]>}
      */
-    GET( evo, url, type = 'json' ) {
-        return fetch( url, evo.data )
+    GET( evo, type, url ) {
+        let _cfg = evo.data || {};
+        _cfg.method = 'GET'
+
+        return fetch( url, _cfg )
             .then( resp => resp.ok ? resp[type]() : Promise.reject(resp.statusText) );
     },
 
@@ -80,25 +83,27 @@ const _By = {
      * 目标：暂存区/栈顶1项。
      * 与GET方法不同，流程数据（暂存区项）是必须的。
      * 数据类型名指的是发送而非获取（如GET），提取返回的响应数据需要进一步调用其方法（见上）。
-     * 注意：
-     * 如果配置对象中已经存在headers属性，则忽略type实参。
-     * 如果提交的数据为 FormData，此时不需要type实参，应当将其设置为null。
-     * 注记：
-     * 默认发送数据类型为JSON，这是Tpb逻辑的偏好鼓励。
-     * @data: 请求配置对象（init）
+     * cfg参考：{
+     *      application/json    JSON 数据
+     *      text/html           HTML 源码文本
+     *      undefined           FormData
+     *      Object              定制配置对象
+     * }
+     * @data: 待发送的数据
      * @param  {String|URL} url 远端处理器
-     * @param  {String} type 发送数据的类型，可选
+     * @param  {String|Object} cfg 发送数据的类型或配置对象
      * @return {Promise<Response>}
      */
-    POST( evo, url, type = 'application/json' ) {
-        let _cfg = evo.data;
-
-        if ( !_cfg.headers && type ) {
-            _cfg.headers = new Headers( {'Content-Type': type} );
+    POST( evo, url, cfg = {} ) {
+        if ( typeof cfg === 'string' ) {
+            cfg = {
+                headers: new Headers({ 'Content-Type': cfg })
+            }
         }
-        _cfg.method = 'POST';
+        cfg.method = 'POST';
+        cfg.body = evo.data;
 
-        return fetch( url, _cfg ).then( resp => resp.ok ? resp : Promise.reject(resp.statusText) );
+        return fetch( url, cfg ).then( resp => resp.ok ? resp : Promise.reject(resp.statusText) );
     },
 
     __POST: 1,

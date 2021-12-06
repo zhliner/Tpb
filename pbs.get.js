@@ -1706,7 +1706,7 @@ const _Gets = {
 ]
 .forEach(function( meth ) {
 
-    // @data:  {Element|Collector}
+    // @data:  {Element|Collector|String}
     _Gets[meth] = function( evo, ...args ) {
         return $mapCall( evo.data, meth, ...args );
     };
