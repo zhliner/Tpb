@@ -109,6 +109,10 @@ const
     // 适用当last文法判断为假时的增强行为。
     __switchDisplay = Symbol('switch-display'),
 
+    // For子元素引用保留。
+    // 避免空数组渲染清空子元素后渲染缺乏目标。
+    __forSubs = Symbol('for-children'),
+
     // 过滤切分器。
     // - 识别字符串语法（字符串内的|为普通字符）。
     // - 排除小括号封装：逻辑或（||）需包含在一对小括号内。
@@ -203,6 +207,10 @@ const Parser = {
      * @return {Map} map
      */
     $for( map, val, el ) {
+        // 引用存储，
+        // 预防子元素被清空失去渲染目标。
+        forSubs( el, true );
+
         return map.set(
             'For',
             [ Expr.loop(val), el.childElementCount, false ]
@@ -396,8 +404,11 @@ const Grammar = {
         }
         let _arr = handle( data );
 
+        if ( el.childElementCount === 0 ) {
+            $.append( el, forSubs(el) );
+        }
         // 需移除子元素中多余的Each。
-        this._alignFor( cleanChildren(el, each), size, _arr.length )
+        this._alignFor( cleanEach(el, each), size, _arr.length )
         .forEach(
             (el, n) => {
                 let _i = parseInt( n / size );
@@ -824,17 +835,32 @@ function eachFor( box ) {
 
 
 /**
+ * For子元素引用存储&提取。
+ * 存储时返回undefined。
+ * @param  {Element} box For容器元素
+ * @param  {Boolean} save 子元素引用存储
+ * @return {[Element]|void} 子元素集
+ */
+function forSubs( box, save ) {
+    if ( !save ) {
+        return box[ __forSubs ];
+    }
+    box[ __forSubs ] = [ ...box.children ];
+}
+
+
+/**
  * 清理子元素。
  * 移除多余的Each克隆元素以保持For规范。
  * 注记：
  * 子元素中的Each可能被单独更新，因此移除更可靠。
- * @param  {Element} box 父元素
+ * @param  {[Element]} els For子元素集
  * @param  {Boolean} each 子元素包含Each文法
- * @return {[Element]}
+ * @return {[Element]} els
  */
-function cleanChildren( box, each ) {
+function cleanEach( els, each ) {
     if ( each ) {
-        for (const el of $.children(box, __slrRender)) {
+        for ( const el of $.children(els, __slrRender) ) {
             if ( el[__eachIndex] > 0 ) {
                 $.remove(el);
             }

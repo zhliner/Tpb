@@ -458,15 +458,6 @@ exec( ...rest ): Value
 calc( expr ): Value
 // 表达式/函数运算。
 
-apply( meth, ...args ): void
-// 应用目标的方法。
-
-applies( meth, ...args ): void
-// 应用目标的方法（多次）。
-
-set( name:String, val:Value|[Value] ): evo.data
-// 设置目标成员值。
-
 
 
 // 实用工具。

@@ -204,7 +204,7 @@ const _Gets = {
      * name支持空格分隔的多个名称，返回一个值数组。
      * 单个名称时返回一个值。
      * 如果目标是一个数组且取多个值，返回的将是一个二维数组。
-     * 注：数值名称针对数组。
+     * 注：数值名称适用数组。
      * @data: Object|[Object]
      * @param  {String|Number} names 名称（序列）
      * @return {Value|[Value]|[[Value]]}
