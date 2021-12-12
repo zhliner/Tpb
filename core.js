@@ -927,7 +927,7 @@ class Cell {
         if ( !this.next ) {
             return val;
         }
-        if ( $.type(val) !== 'Promise' ) {
+        if ( !(val instanceof Promise) ) {
             // 保持线性，避免后续avoid无效。
             return this.next.call(evo, val);
         }
