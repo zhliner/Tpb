@@ -131,8 +131,7 @@ function orderList( vals ) {
  * 支持单个函数扩展到目标子域，此时args为取栈数量实参。
  * 这在简单扩展单个函数时有用（避免构造一个对象）。
  * 注记：
- * - 这是简化版的 By:processExtend 逻辑。
- * - 只能在 On.v 空间设置。
+ * 这是简化版的 By:processExtend 逻辑。
  * @param  {Object} on On空间对象
  * @param  {String|null} name 目标子域序列
  * @param  {Object|Instance|Function} exts 扩展集或类实例或取值函数

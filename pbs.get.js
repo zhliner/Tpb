@@ -658,7 +658,7 @@ const _Gets = {
      * @param  {Boolean} eventdeep 包含子元素的事件处理器，可选
      * @return {Element|Collector}
      */
-    clone( evo, event, deep, eventdeep ) {
+    clone( evo, event, deep = true, eventdeep ) {
         return $mapCall( evo.data, 'clone', event, deep, eventdeep );
     },
 
