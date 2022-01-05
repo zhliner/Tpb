@@ -255,10 +255,10 @@ function cmvApp( by, name, conf, meths = [] ) {
  * @param  {Object} by By定义集，可选
  * @return {Builder}
  */
-function obtBuilder( on = On, by = By ) {
+function obtBuilder( on, by ) {
     return new Builder({
-            on,
-            by,
+            on: on || On,
+            by: by || By,
             update: To.Update,
             next:   To.Next,
         },

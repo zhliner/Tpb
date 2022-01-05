@@ -213,6 +213,7 @@ class Templater {
      * @return {Promise<this>}
      */
     config( maps ) {
+        // 容错无配置值
         return this._loader.config( maps || {} ).then( () => this );
     }
 
