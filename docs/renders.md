@@ -322,7 +322,7 @@ $: {
 
 ```html
 <section>
-    <h3 _text="$.title"></h3>
+    <h2 _text="$.title"></h2>
     <ul>
         <!-- 未用 tpb-with -->
         <li tpb-each="$.list">
@@ -339,7 +339,7 @@ Each子域中增加新的子域（`tpb-with`）。
 
 ```html
 <section>
-    <h3 _text="$.title"></h3>
+    <h2 _text="$.title"></h2>
     <ul>
         <!-- each先执行，with引用 list[i].about -->
         <li tpb-each="$.list" tpb-with="$.about">
