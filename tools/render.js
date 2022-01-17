@@ -854,13 +854,13 @@ function forSubs( box, save ) {
  * 移除多余的Each克隆元素以保持For规范。
  * 注记：
  * 子元素中的Each可能被单独更新，因此移除更可靠。
- * @param  {[Element]} els For子元素集
+ * @param  {Element} box For容器元素
  * @param  {Boolean} each 子元素包含Each文法
- * @return {[Element]} els
+ * @return {[Element]} 子元素集
  */
-function cleanEach( els, each ) {
+function cleanEach( box, each ) {
     if ( each ) {
-        for ( const el of $.children(els, __slrRender) ) {
+        for ( const el of $.children(box, __slrRender) ) {
             if ( el[__eachIndex] > 0 ) {
                 $.remove(el);
             }

@@ -28,9 +28,9 @@ import { format } from "./tools/date.js";
 const
     // 字符串空白清理方法集。
     trimFunc = {
-        '1':    'trimLeft',
+        '1':    'trimStart',
         '0':    'trim',
-        '-1':   'trimRight',
+        '-1':   'trimEnd',
     },
 
     // 空白分隔符。
@@ -1542,8 +1542,8 @@ const _Process = {
      * 空白修整。
      * where: {
      *      0   两端（trim）
-     *      1   前端（trimLeft）
-     *     -1   后端（trimRight）
+     *      1   前端（trimStart）
+     *     -1   后端（trimEnd）
      * }
      * @param  {Number} where 清理位置
      * @return {String|[String]}
