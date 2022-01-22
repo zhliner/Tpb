@@ -426,12 +426,12 @@ function _obtattr( el ) {
  * 路径相对于模板载入器内的根目录。
  * @param  {String} src 源定义
  * @param  {TplLoader} loader 模板载入器
- * @return {[Promise<Object3>]}
+ * @return {[Promise<Object3|[Object3]>]}
  */
 function _obtjson( src, loader ) {
     return src
         .split( __sepPath )
-        .map( path => loader.json(path) );
+        .map( path => loader.json(path.trim()) );
 }
 
 
@@ -439,11 +439,12 @@ function _obtjson( src, loader ) {
  * 获取目标元素的OBT配置。
  * - 本地配置优先，因此会先绑定本地定义。
  * - 会移除元素上的OBT配置属性，如果需要请预先取出。
+ * - 外部配置JSON中支持OBT对象数组，因此需要再展开。
  * 注意：
  * 如果需要解析obt-src特性，需要传递模板载入器loader。
  * @param  {Element} el 目标元素
  * @param  {TplLoader} loader 模板载入器，可选
- * @return {[Promise<Object3>]} OBT配置<{on, by, to}>
+ * @return {Promise<[Object3]>} OBT配置集（[{on, by, to}]）
  */
 function obtAttr( el, loader ) {
     let _buf = [];
@@ -458,7 +459,7 @@ function obtAttr( el, loader ) {
     }
     $.removeAttr( el, __obtName );
 
-    return Promise.all( _buf );
+    return Promise.all( _buf ).then( obts => obts.flat() );
 }
 
 
