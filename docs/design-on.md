@@ -155,11 +155,11 @@ obj2x( target:Object, names?:String ): Object
 elem( tag:String, n:Number ): Element | Collector
 // 简单创建元素（集）。
 
-clone( event?, deep?, eventdeep?:Boolean ): Element|Collector
-// 元素克隆。
+clone( ...args ): Value|Element|Collector
+// 单次克隆。
 
-clones( cnt:Number, event?, deep?, eventdeep?:Boolean ): [Element]
-// 多次克隆（单元素）。
+clones( cnt:Number, event?, deep?, eventdeep?:Boolean ): [Element|Collector]
+// 元素多次克隆。
 
 item( idx? ): Value | [Value] | null
 // 集合成员提取。
@@ -193,17 +193,14 @@ Set( n:Number ): Set
 // 复杂取值。
 //-----------------------------------------------
 
-tpl( name:String ): Promise<Element>
+tpl( name, tname?:String ): Promise<Element>
 // 获取name模板节点。
 
-tpl2( name:String, bound?:Boolean ): Promise<Element>
-// 获取name模板节点副本。
+tplr( name:String ): Templater
+// 获取模板管理器实例
 
-node( name:String, out?:Boolean ): Element | [Element|null] | null
+node( name:String, clone?, bound?:Boolean ): Element | [Element|null] | null
 // 获取模板节点（集）。
-
-node2( name:String, bound?:Boolean ): Element | [Element|null] | null
-// 获取模板节点（集）副本。
 
 keys(): [Value]
 // 获得键数组。

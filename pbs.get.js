@@ -648,41 +648,47 @@ const _Gets = {
 
 
     /**
-     * 元素（集）克隆。
+     * 单次克隆。
      * 目标：暂存区/栈顶1项。
-     * 可选择同时克隆元素上绑定的事件处理器。
-     * 支持多个元素同时克隆。
-     * @data: Element|[Element]
+     * 如果目标上存在.clone方法，则调用该方法，
+     * 否则按元素（集）克隆。
+     * 元素克隆参数：(event, deep, eventdeep)
+     * 注意：
+     * 克隆时是每次都克隆，这在需要重新渲染模板时会有用。
+     * 也可用于通用克隆，如从模板管理器克隆节点（含渲染语法克隆）。
+     * @data: Object|Element|[Element]
      * @param  {Boolean} event 包含事件处理器，可选
      * @param  {Boolean} deep 深层克隆（含子元素），可选（默认true）
      * @param  {Boolean} eventdeep 包含子元素的事件处理器，可选
      * @return {Element|Collector}
      */
-    clone( evo, event, deep = true, eventdeep ) {
-        return $mapCall( evo.data, 'clone', event, deep, eventdeep );
+    clone( evo, ...args ) {
+        let x = evo.data;
+        return x.clone === 'function' ? x.clone( ...args ) : $mapCall( x, 'clone', ...args );
     },
 
     __clone: 1,
 
 
     /**
-     * 多次克隆（单元素）。
+     * 多次克隆。
      * 目标：暂存区/栈顶1项。
+     * 仅支持元素（集）克隆。
      * 可选择同时克隆元素上绑定的事件处理器。
      * 始终返回一个数组。
-     * @data: Element
+     * @data: Element|[Element]
      * @param  {Number} cnt 克隆个数
      * @param  {Boolean} event 包含事件处理器，可选
      * @param  {Boolean} deep 深层克隆（含子元素），可选（默认true）
      * @param  {Boolean} eventdeep 包含子元素的事件处理器，可选
-     * @return {[Element]}
+     * @return {[Element|Collector]}
      */
-    clones( evo, cnt, event, deep, eventdeep ) {
+    clones( evo, cnt, event, deep = true, eventdeep ) {
         let _buf = [];
 
         while ( cnt-- > 0 ) {
             _buf.push(
-                $.clone( evo.data, event, deep, eventdeep )
+                $mapCall( evo.data, 'clone', event, deep, eventdeep )
             );
         }
         return _buf;
@@ -938,38 +944,42 @@ const _Gets = {
     /**
      * 获取模板节点。
      * 目标：暂存区1项可选。
-     * 目标为模板系列所属的域，仅在有多个模板系列时才需要。
+     * 目标为模板管理器，仅在有多个模板系时才需要。
+     * 如果目标有值，优先于实参指定的模板管理器。
+     * 注意：
+     * 获取的模板节点为原始节点。
+     * 如果需要获取一个克隆版，使用.node()接口，或者：
+     *      tplr(tname) clone(name, bound)
      * 注记：
      * 因为返回Promise实例，所以注意avoid等操作应当在此之前。
-     * @data: String 模板域
+     * @data: Templater 模板管理器
      * @param  {String} name 模板名
+     * @param  {String} tname 模板管理器存储名，可选
      * @return {Promise<Element>}
      */
-    tpl( evo, name ) {
-        return TplsPool.get( evo.data || TplrName ).get( name );
+    tpl( evo, name, tname = TplrName ) {
+        return ( evo.data || TplsPool.get(tname) ).get( name );
     },
 
     __tpl: -1,
 
 
     /**
-     * 获取克隆的模板节点。
-     * 目标：暂存区1项可选。
+     * 获取模板管理器。
+     * 目标：无。
+     * 无参数时默认获取本系模板管理器。
      * 注意：
-     * 克隆时是每次都克隆，这在需要重新渲染模板时会有用。
-     * 仅支持单个模板获取/克隆。
-     * 注记：
      * 因为返回Promise实例，所以注意avoid等操作应当在此之前。
+     * 返回的模板管理器可用于克隆或获取节点。
      * @data: String 模板域
-     * @param  {String} name 模板名
-     * @param  {Boolean} bound 包含绑定的事件处理器，可选
-     * @return {Promise<Element>}
+     * @param  {String} tname 模板管理器存储名，可选
+     * @return {Templater}
      */
-    tpl2( evo, name, bound = true ) {
-        return TplsPool.get( evo.data || TplrName ).clone( name, bound );
+    tplr( evo, tname = TplrName ) {
+        return TplsPool.get( tname );
     },
 
-    __tpl2: -1,
+    __tplr: null,
 
 
     /**
@@ -983,45 +993,22 @@ const _Gets = {
      * 1. 在主页面中通过隐藏的tpl-source或tpl-node预先载入。
      * 2. 其它先构建（Tpb.build）的模板导致节点已经自动载入。
      * 3. 主动使用tpl载入单个节点，于是与该节点定义在同一文件中的其它节点就会自动载入。
-     * @data: String 模板域
+     * @data: Templater 模板管理器
      * @param  {String} name 模板名/序列
-     * @param  {Boolean} out 是否从节点缓存中移除
-     * @return {Element|[Element|null]|null}
+     * @param  {Boolean} clone 是否克隆
+     * @param  {Boolean} bound 克隆包含绑定是事件处理器，可选
+     * @return {Element|null|[Element|null]}
      */
-    node( evo, name, out ) {
-        let _fn = out ? 'del' : 'node',
-            _ts = TplsPool.get( evo.data || TplrName );
+    node( evo, name, clone, bound ) {
+        let _tr = evo.data || TplsPool.get( TplrName );
 
         if ( __reSpace.test(name) ) {
-            return name.split( __reSpace ).map( n => _ts[_fn](n) );
+            return name.split( __reSpace ).map( n => _tr.node(n, clone, bound) );
         }
-        return _ts[_fn]( name );
+        return _tr.node( name, clone, bound );
     },
 
     __node: -1,
-
-
-    /**
-     * 获取模板节点（集）副本。
-     * 目标：暂存区1项可选。
-     * 说明参考上面.node()接口，但不存在移出逻辑。
-     * 注意：
-     * 与.tpl2()相似，克隆是每次触发都会克隆一个/组新的节点。
-     * @data: String 模板域
-     * @param  {Boolean|null} clone 是否克隆或移出
-     * @param  {Boolean} bound 克隆包含绑定是事件处理器，可选
-     * @return {Element|[Element|null]|null}
-     */
-    node2( evo, name, bound = true ) {
-        let _ts = TplsPool.get( evo.data || TplrName );
-
-        if ( __reSpace.test(name) ) {
-            return name.split( __reSpace ).map( n => _ts.node(n, true, bound) );
-        }
-        return _ts.node( name, true, bound );
-    },
-
-    __node2: -1,
 
 
     /**
