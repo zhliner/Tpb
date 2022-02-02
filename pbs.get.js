@@ -362,30 +362,56 @@ const _Gets = {
     /**
      * 获取当前选取范围。
      * 目标：无。
-     * 即获取用户在页面中的划选部分。
-     * 严格约束下，选区首尾需在同一容器元素内（完整嵌套）。
-     * 无选取时返回 null。
+     * 即获取用户在窗口中的划选部分。
+     * 默认严格约束，选区首尾需在同一容器节点内（完整嵌套）。
+     * 必须存在选取内容（折叠时无内容），否则返回 null。
      * 严格约束下非完整嵌套返回 false。
      * @param  {Boolean} loose 非严格约束
      * @return {Range|null|false}
      */
     sRange( evo, loose = false ) {
         let _sel = window.getSelection(),
-            _rng = null;
+            _rng = _sel.rangeCount > 0 && _sel.getRangeAt(0);
 
-        if ( _sel.rangeCount > 0 ) {
-            _rng = _sel.getRangeAt(0);
+        if ( !_rng || _rng.collapsed ) {
+            return null;
         }
-        // Firefox:
-        // <audio>|<video>上不可取 .startContainer 的属性，
-        // 但两个容器的对比值会为true（二者皆为 Restricted）。
-        if ( loose || !_rng || _rng.startContainer === _rng.endContainer ) {
+        // 注记：
+        // Firefox中<audio>|<video>上不可取 .startContainer 的属性，
+        // 但两个容器的对比值会为true（二者皆为 Restricted）。也可行。
+        if ( loose || _rng.startContainer === _rng.endContainer ) {
             return _rng;
         }
         return _rng.startContainer.parentNode === _rng.endContainer.parentNode && _rng;
     },
 
     __sRange: null,
+
+
+    /**
+     * 获取当前窗口内的范围对象。
+     * 目标：暂存区1项可选。
+     * 目标为范围限定元素，在范围内时才有效。
+     * 如果压根就没有选区，返回null。
+     * 如果选区不在限定元素内，返回false。
+     * 注：
+     * 与上面的sRange不同，不区分选区是否折叠或规范嵌套。
+     * strict实参仅在有范围限定时才有意义。
+     * @data: Element 限定容器
+     * @param  {Boolean} strict 严格子级包含
+     * @return {Range|null|false}
+     */
+    wRange( evo, strict ) {
+        let _sel = window.getSelection(),
+            _rng = _sel.rangeCount > 0 && _sel.getRangeAt(0);
+
+        if ( !_rng || evo.data === undefined ) {
+            return _rng || null;
+        }
+        return $.contains( evo.data, _rng.commonAncestorContainer, strict ) && _rng;
+    },
+
+    __wRange: -1,
 
 
     /**
@@ -503,6 +529,19 @@ const _Gets = {
     },
 
     __str: 1,
+
+
+    /**
+     * 转为字符串。
+     * 仅附加后缀的简洁版（模板中使用更短）。
+     * @param  {String} suf 后缀
+     * @return {String}
+     */
+    strr( evo, suf = '' ) {
+        return mapCall( evo.data, v => `${v}${suf}` );
+    },
+
+    __strr: 1,
 
 
     /**
@@ -1105,15 +1144,18 @@ const _Gets = {
      * 检查是否容纳选区。
      * 目标：暂存区/栈顶1项。
      * 检查选区对象是否完全在目标容器元素之内。
+     * 注记：
+     * 当el为选择器时strict才比较友好，否则两个实参需要先压入数据栈再一起提取。
      * @data: Range
      * @param  {Element|String} el 容器元素或其选择器
+     * @param  {Boolean} strict 严格子级包含
      * @return {Boolean}
      */
-    hasRange( evo, el ) {
+    hasRange( evo, el, strict ) {
         if ( typeof el === 'string' ) {
             el = Util.find( el, evo.delegate, true );
         }
-        return evo.data && $.contains( el, evo.data.commonAncestorContainer );
+        return evo.data && $.contains( el, evo.data.commonAncestorContainer, strict );
     },
 
     __hasRange: 1,
@@ -1444,7 +1486,7 @@ const _Gets = {
 
     /**
      * 触发目标变化事件。
-     * 这是 click,blur等事件系列的延伸（但元素上无此原生方法）。
+     * 这是 click,blur 等事件系列的延伸（但元素上无此原生方法）。
      * 理解：重在”调用“。
      * @data: Element|[Element] 待激发元素
      * @return {void}
@@ -1468,6 +1510,20 @@ const _Gets = {
     },
 
     __changes: 1,
+
+
+    /**
+     * 定制：选取操作。
+     * 如果是表单控件元素，简单调用其方法。
+     * 如果是普通元素，选取其内容或元素自身为一个Range。
+     * @param  {Boolean} self 选取元素自身，可选
+     * @return {void}
+     */
+    select( evo, self ) {
+        $mapCall( evo.data, 'select', self );
+    },
+
+    __select: 1,
 
 
     /**
@@ -1974,7 +2030,7 @@ const _Gets = {
     'play',
     'pause',
     'reset',
-    'select',
+    // 'select',  // 定制
     'submit',
     'finish',
     'cancel',

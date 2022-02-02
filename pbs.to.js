@@ -185,7 +185,7 @@ const _Update = {
      * - Number:  top 单个数值时指垂直滚动条位置。
      * 注记：不影响未设置方向的现有位置。
      * @param  {Element|Collector} to 目标元素/集
-     * @param  {Array2|Object2|Number} 位置配置
+     * @param  {Array2|Object2|Number} pos 位置配置
      * @return {Collector|void}
      */
     scroll( to, pos ) {
@@ -193,6 +193,20 @@ const _Update = {
             return $(to).scroll( scrollObj(pos) )
         }
         $.scroll( to, scrollObj(pos) );
+    },
+
+
+    /**
+     * 选取元素或其内容。
+     * @param  {Element|Collector} to 目标元素/集
+     * @param  {Boolean} self 选取元素自身（而非其内容），可选
+     * @return {Collector|void}
+     */
+    select( to, self ) {
+        if ( $.isArray(to) ) {
+            return $(to).select( self )
+        }
+        $.select( to, self );
     },
 
 
@@ -862,7 +876,7 @@ const _Next = {
     'play',
     'pause',
     'reset',
-    'select',
+    // 'select',  // 定制
     'submit',
     'finish',
     'cancel',

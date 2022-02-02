@@ -104,8 +104,11 @@ checked( name:String ): Boolean | [Boolean] | null
 style( name:String ): String | [String] | [[String]]
 // 获取元素内联样式。
 
-sRange( loose:Boolean ): Range | null | false
-// 获取当前选取范围。
+sRange( loose?:Boolean ): Range | null | false
+// 获取当前选取范围（可选嵌套约束）。
+
+wRange( strict?:Boolean ): Range | null | false
+// 获取当前选取范围（可选范围限定）。
 
 nodeRange( collapse:Boolean|void ): Range
 // 选取目标节点为一个范围（Range）。
@@ -133,6 +136,9 @@ bool( all:Boolean ): Boolean
 
 str( prefix?, suffix? ): String
 // 转换为字符串。
+
+strr( suffix:String ): String
+// 转为字符串。
 
 arr( wrap:Boolean ): Array
 // 转换/封装为数组。
@@ -217,8 +223,8 @@ data( name: String ): void|Value
 einfo( hasid:Boolean, hascls:Boolean ): String | [String]
 // 生成元素基本信息。
 
-hasRange( el:Element|String ): Boolean
-// 元素是否含有选区。
+hasRange( el:Element|String, strict?:Boolean ): Boolean
+// 选区是否在元素之内。
 
 scam( names?:String ): Boolean
 // 修饰键{Alt|Ctrl|Shift|Meta}按下检查（排他性）。

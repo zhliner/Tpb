@@ -251,12 +251,13 @@ const _Control = {
 
     /**
      * 剪取数据栈目标位置条目（单项）。
-     * idx负值从末尾算起（-1为栈顶1项）。
+     * idx从0开始，负值从栈顶算起（-1即为栈顶项）。
      * 结合push指令，可用于交换栈顶条目位置。
      * 例：
-     * pick(-1)  同 pop
-     * pick(-2)  取栈顶之下1项。
+     * pick(-1) 同 pop
+     * pick(-2) 取栈顶之下1项。
      * (val) pick(-2) push 剪取栈顶之下1项后入栈（交换栈顶2项）。
+     * pick(0)  取出栈底第一项。
      * @temp: Value
      * @param {Stack} stack 数据栈
      * @param {Number} idx 位置下标（支持负数）
