@@ -85,19 +85,19 @@ const Util = {
      * @param  {String}  slr 选择器串（外部trim）
      * @param  {Element} beg 起点元素，可选
      * @param  {Boolean} one 是否单元素检索，可选
-     * @param  {Element} top 全局上下文，可选
+     * @param  {Element} ctx 全局上下文，可选
      * @return {Collector|Element|null} 目标元素（集）
      */
-    find( slr, beg, one, top ) {
+    find( slr, beg, one, ctx ) {
         if ( !slr || slr == __chrSp2 ) {
-            return beg;
+            return one ? beg : $( beg );
         }
         if ( slr.includes(__chrSp2) ) {
-            [slr, beg] = fmtSplit( slr, beg, top );
+            [slr, beg] = fmtSplit( slr, beg, ctx );
         } else {
-            beg = top || undefined;
+            beg = ctx || undefined;
         }
-        return one ? query1( slr, beg ) : query2( slr, beg );
+        return one ? $.get( slr, beg ) : $( slr, beg );
     },
 
 
@@ -247,15 +247,15 @@ const Util = {
  * 如果实际上不是二阶选择器，起点即为全局上下文。
  * @param  {String} slr 选择器串
  * @param  {Element} beg 起点元素
- * @param  {Element} top 全局上下文，可选
+ * @param  {Element} ctx 全局上下文，可选
  * @return {[String, Element]} 向下选择器和上下文元素
  */
-function fmtSplit( fmt, beg, top ) {
+function fmtSplit( fmt, beg, ctx ) {
     let _s2 = [
         ...__slrSplit.split(fmt, 1)
     ];
     if ( _s2.length == 1 ) {
-        return [ fmt, top ];
+        return [ fmt, ctx ];
     }
     return [ _s2[1], closest(_s2[0].trim(), beg) ];
 }
@@ -273,30 +273,6 @@ function closest( slr, beg ) {
         return beg;
     }
     return isNaN(slr) ? $.closest(beg.parentNode, slr) : $.closest(beg, (_, i) => i == slr);
-}
-
-
-/**
- * 向下单元素检索。
- * 注：若无选择器，返回上下文元素本身。
- * @param  {String} slr 选择器
- * @param  {Element} beg 上下文元素
- * @return {Element|null}
- */
-function query1( slr, beg ) {
-    return slr ? $.get( slr, beg ) : beg;
-}
-
-
-/**
- * 向下多元素检索。
- * 注：若无选择器，返回上下文元素本身（封装）。
- * @param  {String} slr 选择器
- * @param  {Element|null} beg 上下文元素
- * @return {Collector}
- */
-function query2( slr, beg ) {
-    return slr ? $( slr, beg ) : $(beg);
 }
 
 

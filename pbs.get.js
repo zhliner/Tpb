@@ -107,10 +107,11 @@ const _Gets = {
      * 否则视为全局选择器（document为上下文）。
      * @param  {Object} evo 事件关联对象
      * @param  {String} rid 相对ID，可选
+     * @param  {Element|DocumentFragment} ctx 全局上下文，可选
      * @return {Element|null}
      */
-    $( evo, rid ) {
-        return Util.find(rid, evo.data || evo.delegate, true);
+    $( evo, rid, ctx ) {
+        return Util.find( rid, evo.data || evo.delegate, true, ctx );
     },
 
     __$: -1,
@@ -127,13 +128,14 @@ const _Gets = {
      * 2. push('abc') $$(_)   // 从流程取不定数量实参，'abc'会被展开传递，实际上rid仅为'a'
      * @param  {Object} evo 事件关联对象
      * @param  {String|Value} rid 相对ID或待封装值
+     * @param  {Element|DocumentFragment} ctx 全局上下文，可选
      * @return {Collector}
      */
-    $$( evo, rid ) {
+    $$( evo, rid, ctx ) {
         if ( typeof rid !== 'string' ) {
             return $( rid );
         }
-        return Util.find( rid, evo.data || evo.delegate );
+        return Util.find( rid, evo.data || evo.delegate, false, ctx );
     },
 
     __$$: -1,

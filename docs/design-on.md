@@ -54,10 +54,10 @@
 // 基本取值。
 //-----------------------------------------------
 
-$( rid:String ): Element | null
+$( rid:String, ctx:Element|DocumentFragment ): Element | null
 // 检索单个元素入栈。
 
-$$( rid:String|Value ): Collector
+$$( rid:String|Value, ctx:Element|DocumentFragment ): Collector
 // 检索元素集入栈。
 
 evo( name:String|Number ): Value
