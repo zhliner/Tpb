@@ -97,7 +97,8 @@ const Util = {
         } else {
             beg = ctx || undefined;
         }
-        return one ? $.get( slr, beg ) : $( slr, beg );
+        // slr 可能再为空
+        return one ? query1( slr, beg ) : query2( slr, beg );
     },
 
 
@@ -274,6 +275,31 @@ function closest( slr, beg ) {
     }
     return isNaN(slr) ? $.closest(beg.parentNode, slr) : $.closest(beg, (_, i) => i == slr);
 }
+
+
+/**
+ * 向下单元素检索。
+ * 注：若无选择器，返回上下文元素本身。
+ * @param  {String} slr 选择器
+ * @param  {Element} beg 上下文元素
+ * @return {Element|null}
+ */
+function query1( slr, beg ) {
+    return slr ? $.get( slr, beg ) : beg;
+}
+
+
+/**
+ * 向下多元素检索。
+ * 注：若无选择器，返回上下文元素本身（封装）。
+ * @param  {String} slr 选择器
+ * @param  {Element|null} beg 上下文元素
+ * @return {Collector}
+ */
+function query2( slr, beg ) {
+    return slr ? $( slr, beg ) : $( beg );
+}
+
 
 
 /**
