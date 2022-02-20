@@ -197,20 +197,6 @@ const _Update = {
 
 
     /**
-     * 选取元素或其内容。
-     * @param  {Element|Collector} to 目标元素/集
-     * @param  {Boolean} self 选取元素自身（而非其内容），可选
-     * @return {Collector|void}
-     */
-    select( to, self ) {
-        if ( $.isArray(to) ) {
-            return $(to).select( self )
-        }
-        $.select( to, self );
-    },
-
-
-    /**
      * 节点修改。
      * 与append|after|replace等明确的调用不同，这提供一种动态指定方法的能力。
      * 注：仅限于tQuery中改变节点内容的方法。
@@ -815,6 +801,19 @@ const _Next = {
 
     // 待发送数据。
     __changes: -1,
+
+
+    /**
+     * 选取元素或其内容。
+     * 选择器只支持单个目标元素。
+     * 注：容错Query部分目标为一个集合形式。
+     * @param {String} rid 目标元素选择器，可选
+     * @param  {Boolean} self 选取元素自身（而非其内容），可选
+     * @return {Collector|void}
+     */
+    select( evo, rid = 11, self ) {
+        $( evo.data || _target(evo, rid, true) ).select( self );
+    },
 
 
     /**
