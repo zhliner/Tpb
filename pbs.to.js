@@ -815,6 +815,8 @@ const _Next = {
         $( evo.data || _target(evo, rid, true) ).select( self );
     },
 
+    __select: -1,
+
 
     /**
      * 目标规范化。
