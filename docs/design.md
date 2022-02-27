@@ -539,7 +539,7 @@ splice( start, delcnt, ... ): Array
 mix( n ): Array
 // 集合混合。
 
-sum(): Number
+sum( n, deep:Number ): Number
 // 集合成员值累计。
 
 clean( val, rep ): Object|[Object]

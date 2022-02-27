@@ -86,8 +86,9 @@ const _By = {
      * cfg参考：{
      *      application/json    JSON 数据
      *      text/html           HTML 源码文本
-     *      undefined           FormData
+     *      text/plain          纯文本内容
      *      Object              定制配置对象
+     *      undefined           FormData，默认
      * }
      * @data: 待发送的数据
      * @param  {String|URL} url 远端处理器

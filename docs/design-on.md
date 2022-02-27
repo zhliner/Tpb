@@ -137,9 +137,6 @@ bool( all:Boolean ): Boolean
 str( prefix?, suffix? ): String
 // 转换为字符串。
 
-strr( suffix:String ): String
-// 转为字符串。
-
 arr( wrap:Boolean ): Array
 // 转换/封装为数组。
 

@@ -759,14 +759,19 @@ const _Process = {
      * 目标：无。
      * 特权：是，自行取项。
      * 多个数组按相同下标取值的子数组构成二维数组。
-     * 即：各数组成员平行对应，以首个数组的大小为大小。
+     * 即：各数组成员平行对应（取值为一个子数组），以首个数组的大小为大小。
+     * 默认取暂存区全部成员。
      * @data: [Array]
      * @param  {Stack} stack 数据栈
-     * @param  {Number} n 取项数量
+     * @param  {Number} n 取项数量，可选
      * @return {[ArrayN]} n项二维数组
      */
-    mix( evo, stack, n ) {
-        let _as = stack.data(n);
+    mix( evo, stack, n = 0 ) {
+        if ( n < 0 ) {
+            throw new Error( `[${n}] must be a positive integer.` );
+        }
+        let _as = stack.data( n );
+
         return _as[0].map( (_, i) => _as.map( a => a[i] ) );
     },
 
@@ -775,14 +780,25 @@ const _Process = {
 
     /**
      * 合计集合成员的值。
+     * 目标：无。
+     * 特权：是，手动取栈数据。
+     * 如果未传递取栈数量，默认取暂存区全部成员。
+     * 如果取栈数量为多个，集合成员也可以是数组，会被扁平化。
      * @data: [Number]
+     * @param  {Number} n 取栈数量，可选
+     * @param  {Number} deep 扁平化深度，可选
      * @return {Number}
      */
-    sum( evo ) {
-        return evo.data.reduce( (sum, n) => sum + n, 0 );
+    sum( evo, stack, n = 0, deep = 1 ) {
+        if ( n < 0 ) {
+            throw new Error( `[${n}] must be a positive integer.` );
+        }
+        let _ns = stack.data( n );
+
+        return _ns.flat( deep ).reduce( (sum, n) => sum + n, 0 );
     },
 
-    __sum: 1,
+    __sum_x: true,
 
 
     /**
