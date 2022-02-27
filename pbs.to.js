@@ -982,6 +982,7 @@ function setData( els, names, data, handle ) {
 
 /**
  * 绑定指定存储。
+ * 注意：切分事件名和附加ID以首个冒号为分界。
  * @param  {Element} el 绑定目标
  * @param  {Map} map 存储集
  * @param  {[String]} evns 事件名序列
