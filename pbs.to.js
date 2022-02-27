@@ -146,23 +146,6 @@ const _Update = {
 
 
     /**
-     * 特性值切换。
-     * 支持text/html两个特殊属性名（tQuery）。
-     * @param  {Element|Collector} to 目标元素（集）
-     * @param  {Value} val 特性值
-     * @param  {String} name 特性名
-     * @param  {Boolean} ignore 对比是否忽略大小写
-     * @return {Collector|void}
-     */
-    toggleAttr( to, val, name, ignore) {
-        if ( $.isArray(to) ) {
-            return $(to).toggleAttr( name, val, ignore );
-        }
-        $.toggleAttr( to, name, val, ignore );
-    },
-
-
-    /**
      * 集合包裹。
      * 注：tos视为一个整体作为待插入的内容。
      * @param  {Element|Collector} to 检索目标
@@ -578,15 +561,18 @@ const _Update = {
     'width',        // val: Number, (inc:Boolean)
     'scrollTop',    // val: Number, (inc:Boolean)
     'scrollLeft',   // val: Number, (inc:Boolean)
+    'val',          // val: {Value|[Value]|Function}
+    'offset',       // val: {top:Number, left:Number}|null
     'addClass',     // name: {String|Function}
     'removeClass',  // name: {String|Function}
     'toggleClass',  // name: {String|Function|Boolean}, (force:Boolean)
     'removeAttr',   // name: {String|Function}
-    'val',          // val: {Value|[Value]|Function}
-    'offset',       // val: {top:Number, left:Number}
 ]
 .forEach(function( meth ) {
     /**
+     * 注记：
+     * 部分方法有取值逻辑，
+     * 预防用户错误使用，故此不返回Collector封装。
      * @param  {Element|Collector} to 目标元素/集
      * @param  {Value} data 数据内容
      * @param  {...Value} args 额外参数
@@ -600,6 +586,31 @@ const _Update = {
         }
     };
 
+});
+
+
+//
+// 注意名值参数顺序。
+// 无取值逻辑，故集合版友好返回Collector封装。
+//
+[
+    'toggleAttr',   // ignore
+    'toggleStyle',  // equal
+]
+.forEach(function( meth ) {
+    /**
+     * @param  {Element|Collector} to 目标元素（集）
+     * @param  {Value} val 特性值
+     * @param  {String} name 特性名
+     * @param  {Boolean} arg 额外参数（ignore|equal）
+     * @return {Collector|void}
+     */
+    _Update[meth] = function( to, val, name, arg ) {
+        if ( $.isArray(to) ) {
+            return $(to)[meth]( name, val, arg );
+        }
+        $[meth]( to, name, val, arg );
+    }
 });
 
 

@@ -46,11 +46,37 @@ const _By = {
      * @param  {Object|Value|[Value]} vals 渲染数据
      * @return {Element} 被渲染节点
      */
-    render( evo, vals ) {
-        return Render.update( evo.data, vals );
+    render( evo, data ) {
+        return Render.update( evo.data, data );
     },
 
     __render: 1,
+
+
+    /**
+     * 在当前DOM中插入脚本。
+     * @data: Element box 容器元素，可选
+     * @param  {String|Object} data 脚本代码或配置对象
+     * @return {Element|Promise<Element>}
+     */
+    script( evo, data ) {
+        return $.script( data, evo.data );
+    },
+
+    __script: -1,
+
+
+    /**
+     * 在当前DOM中插入样式元素
+     * @data: Element Next 参考元素，可选
+     * @param  {String|Object} data 样式代码或配置对象
+     * @return {Element|Promise<Element>}
+     */
+    style( evo, data ) {
+        return $.style( data, evo.data );
+    },
+
+    __style: -1,
 
 
     /**
