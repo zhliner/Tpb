@@ -157,11 +157,12 @@ offset(): Collector|void                        // {top:Number, left:Number}
 /////////////////////////////////////////////////
 attr( name:String ): Collector|void
 attribute( names:String ): Collector|void
-toggleAttr( name:String ): Collector|void
+toggleAttr( name:String, i:Boolean ): Collector|void
 prop( name:String ): Collector|void
 property( names:String ): Collector|void
 css( name:String ): Collector|void
 cssSets( names:String ): Collector|void
+toggleStyle( name:String, equal:Boolean ): Collector|void
 
 
 //

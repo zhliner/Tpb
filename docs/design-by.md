@@ -8,21 +8,19 @@
 当前条目（目标）为指令操作的对象。仅包含极少量的几个顶级基础指令。
 
 ```js
-render( data?:Value ): Element
+render( data:Value ): Element
 // 模板节点渲染。
-// 通常是对tpl指令获取的元素进行渲染，
-// 但也适用任意已经存在于DOM中的有渲染配置的元素。
-// 目标：当前条目/栈顶1-2项。
-// 内容：[Element, data:Value]
-// 注：
-// 模板实参data是可选的，如果为空则取栈顶2项（或当前条目展开）。
-// 注记：
-// 在By段定义此方法，是因为模板可能从远端获取，渲染之后需要插入（To）DOM中。
 
-GET( url, type?:String ): Promise<[type]>
+script( data:String|Object ): Element|Promise<Element>
+// 插入脚本代码或引入URL脚本。
+
+style( data:String|Object ): Element|Promise<Element>
+// 插入样式代码或引入样式URL资源。
+
+GET( type, url:String ): Promise<[type]>
 // 获取远端数据。
 
-POST( url, type?:String ): Promise<Response>
+POST( url, cfg?:Object ): Promise<Response>
 // 向远端递送信息。
 ```
 

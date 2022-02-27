@@ -43,6 +43,7 @@ const _By = {
      * 目标：暂存区/栈顶1项。
      * 仅支持单个根元素，如果目标是多个元素则需要封装到一个容器内。
      * 如果需要同一数据对多个元素分别渲染，可用To.Update:render。
+     * @data: Element
      * @param  {Object|Value|[Value]} vals 渲染数据
      * @return {Element} 被渲染节点
      */
