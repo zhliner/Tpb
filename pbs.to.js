@@ -172,10 +172,14 @@ const _Update = {
      * @return {Collector|void}
      */
     scroll( to, pos ) {
+        pos = scrollObj( pos );
+
         if ( $.isArray(to) ) {
-            return $(to).scroll( scrollObj(pos) )
+            to = $( to );
+            requestAnimationFrame( () => to.scroll(pos) );
+        } else {
+            requestAnimationFrame( () => $.scroll(to, pos) );
         }
-        $.scroll( to, scrollObj(pos) );
     },
 
 
