@@ -1545,20 +1545,24 @@ const _Gets = {
      * 鼠标水平移动量。
      * 目标：无。
      * 前值存储在事件当前元素上，解绑时应当重置（null）。
+     * 可以传递一个固定值用于替换鼠标移动量，这样可产生一种放大或缩小效应。
+     * 用于替换的固定值会依鼠标移动方向而设置是否为负数。
+     * 注意：
+     * 仅在指针确实移动了（非零）才会返回替换的值。
      * 注记：
      * mousemove事件中movementX/Y的值在缩放显示屏下有误差（chrome），
      * 因此用绝对像素值（event.pageX/pageY）重新实现。
      * 前值存储在事件当前元素（evo.current）上，解绑时应当重置（null）。
-     * @param  {null} nil 清除存储
+     * @param  {Number|null} val 固定值或存储清除标记
      * @return {Number|void} 变化量（像素）
      */
-    movementX( evo, nil ) {
+    movementX( evo, val ) {
         let _el = evo.current;
 
-        if ( nil !== null ) {
+        if ( val !== null ) {
             let _v = _el[__movementX];
             // n - undefined == NaN => 0
-            return ( _el[__movementX] = evo.event.pageX ) - _v || 0;
+            return movementValue( (_el[__movementX] = evo.event.pageX) - _v || 0, +val );
         }
         delete _el[__movementX];
     },
@@ -1569,15 +1573,16 @@ const _Gets = {
     /**
      * 鼠标垂直移动量。
      * 目标：无。
-     * @param  {null} nil 清除存储
+     * 说明参考上面movementX接口。
+     * @param  {Number|null} val 固定值或存储清除标记
      * @return {Number|void} 变化量（像素）
      */
-    movementY( evo, nil ) {
+    movementY( evo, val ) {
         let _el = evo.current;
 
-        if ( nil !== null ) {
+        if ( val !== null ) {
             let _v = _el[__movementY];
-            return ( _el[__movementY] = evo.event.pageY ) - _v || 0;
+            return movementValue( (_el[__movementY] = evo.event.pageY) - _v || 0, +val );
         }
         delete _el[__movementY];
     },
@@ -2293,6 +2298,20 @@ function nullVal( v ) {
  */
 function strictMatch( names, set ) {
     return names.length === set.size && names.every( n => set.has(n.toLowerCase()) );
+}
+
+
+/**
+ * 鼠标移动固定替换值。
+ * @param  {Number} inc 指针移动量
+ * @param  {Number|void} val 替换值
+ * @return {Number}
+ */
+function movementValue( inc, val ) {
+    if ( inc === 0 || isNaN(val) ) {
+        return inc;
+    }
+    return inc < 0 ? -val : val;
 }
 
 

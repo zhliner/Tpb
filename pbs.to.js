@@ -557,10 +557,6 @@ const _Update = {
 // 多余实参无副作用。
 //---------------------------------------------------------
 [
-    'height',       // val: Number, (inc:Boolean)
-    'width',        // val: Number, (inc:Boolean)
-    'scrollTop',    // val: Number, (inc:Boolean)
-    'scrollLeft',   // val: Number, (inc:Boolean)
     'val',          // val: {Value|[Value]|Function}
     'offset',       // val: {top:Number, left:Number}|null
     'addClass',     // name: {String|Function}
@@ -590,6 +586,34 @@ const _Update = {
 
 
 //
+// UI视觉变化类。
+// 会调用requestAnimationFrame()以缓解闪烁。
+//
+[
+    'width',
+    'height',
+    'scrollTop',
+    'scrollLeft',
+]
+.forEach(function( meth ) {
+    /**
+     * @to: Element|Collector 目标元素（集）
+     * @data: Number 宽高像素值
+     * @param  {Boolean} inc 是否为增量设置
+     * @return {void}
+     */
+    _Update[meth] = function( to, val, inc ) {
+        if ( $.isArray(to) ) {
+            to = $( to );
+            requestAnimationFrame( () => to[meth](val, inc) );
+        } else {
+            requestAnimationFrame( () => $[meth](to, val, inc) );
+        }
+    }
+});
+
+
+//
 // 注意名值参数顺序。
 // 无取值逻辑，故集合版友好返回Collector封装。
 //
@@ -599,8 +623,8 @@ const _Update = {
 ]
 .forEach(function( meth ) {
     /**
-     * @param  {Element|Collector} to 目标元素（集）
-     * @param  {Value} val 特性值
+     * @to: Element|Collector 目标元素（集）
+     * @data: Value val 特性值
      * @param  {String} name 特性名
      * @param  {Boolean} arg 额外参数（ignore|equal）
      * @return {Collector|void}
@@ -629,8 +653,8 @@ const _Update = {
      * 目标为数组时返回目标的Collector封装。
      * 目标为元素时保持不变。
      * 注意：传递ival时处理器必须为调用链头（Cell）。
-     * @param  {Element|Collector} to 目标元素（集）
-     * @param  {EventListener|Function|false|null|undefined} handler 事件处理器
+     * @to: Element|Collector 目标元素（集）
+     * @data: EventListener|Function|false|null|undefined} handler 事件处理器
      * @param  {String} evn 事件名（序列）
      * @param  {String} slr 委托选择器，可选
      * @param  {Value} ival 调用链初始赋值，可选
