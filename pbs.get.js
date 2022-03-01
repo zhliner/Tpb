@@ -365,26 +365,32 @@ const _Gets = {
      * 获取当前选取范围。
      * 目标：无。
      * 即获取用户在窗口中的划选部分。
-     * 默认严格约束，选区首尾需在同一容器节点内（完整嵌套）。
-     * 必须存在选取内容（折叠时无内容），否则返回 null。
-     * 严格约束下非完整嵌套返回 false。
-     * @param  {Boolean} loose 非严格约束
+     * collapse:
+     * - true   选区需是折叠的（无内容），否则返回 false。
+     * - false  选区需包含内容，否则返回 false。
+     * - null   完整嵌套。选区有内容且首尾在同一容器内，否则返回 false。
+     * - undefined  无条件返回选区，没有条件约束。
+     * 注记：
+     * 返回null表示文档内压根没有被点选（聚焦）。
+     * 折叠时（无内容）返回Range，可以获取插入位置。
+     * @param  {Boolean|null} collapse 折叠或严格约束标记
      * @return {Range|null|false}
      */
-    sRange( evo, loose = false ) {
+    sRange( evo, collapse ) {
         let _sel = window.getSelection(),
-            _rng = _sel.rangeCount > 0 && _sel.getRangeAt(0);
+            _rng = _sel.rangeCount > 0 ? _sel.getRangeAt(0) : null;
 
-        if ( !_rng || _rng.collapsed ) {
-            return null;
-        }
-        // 注记：
-        // Firefox中<audio>|<video>上不可取 .startContainer 的属性，
-        // 但两个容器的对比值会为true（二者皆为 Restricted）。也可行。
-        if ( loose || _rng.startContainer === _rng.endContainer ) {
+        if ( !_rng || collapse === undefined ) {
             return _rng;
         }
-        return _rng.startContainer.parentNode === _rng.endContainer.parentNode && _rng;
+        switch ( collapse ) {
+            case null:
+                return !_rng.collapsed && _rng.startContainer.parentNode === _rng.endContainer.parentNode && _rng;
+            case true:
+                return _rng.collapsed && _rng;
+            case false:
+                return !_rng.collapsed && _rng
+        }
     },
 
     __sRange: null,

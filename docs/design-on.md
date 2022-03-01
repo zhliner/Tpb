@@ -104,8 +104,8 @@ checked( name:String ): Boolean | [Boolean] | null
 style( name:String ): String | [String] | [[String]]
 // 获取元素内联样式。
 
-sRange( loose?:Boolean ): Range | null | false
-// 获取当前选取范围（可选嵌套约束）。
+sRange( collapse?:Boolean|null ): Range | null | false
+// 获取当前选取范围。
 
 wRange( strict?:Boolean ): Range | null | false
 // 获取当前选取范围（可选范围限定）。
