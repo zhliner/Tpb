@@ -368,12 +368,13 @@ const _Gets = {
      * collapse:
      * - true   选区需是折叠的（无内容），否则返回 false。
      * - false  选区需包含内容，否则返回 false。
-     * - null   完整嵌套。选区有内容且首尾在同一容器内，否则返回 false。
+     * - ''     选区有内容且完整嵌套（首尾在同一容器内），否则返回 false。
+     * - null   完整嵌套，包含选区为空时。否则返回 false。
      * - undefined  无条件返回选区，没有条件约束。
      * 注记：
-     * 返回null表示文档内压根没有被点选（聚焦）。
-     * 折叠时（无内容）返回Range，可以获取插入位置。
-     * @param  {Boolean|null} collapse 折叠或严格约束标记
+     * 返回折叠（无内容）的Range可以获取插入点。
+     * 返回null表示文档内压根没有被点选/聚焦。
+     * @param  {Boolean|null|''} collapse 折叠或严格约束标记
      * @return {Range|null|false}
      */
     sRange( evo, collapse ) {
@@ -384,12 +385,14 @@ const _Gets = {
             return _rng;
         }
         switch ( collapse ) {
-            case null:
+            case '':
                 return !_rng.collapsed && _rng.startContainer.parentNode === _rng.endContainer.parentNode && _rng;
             case true:
                 return _rng.collapsed && _rng;
             case false:
                 return !_rng.collapsed && _rng
+            case null:
+                return _rng.startContainer.parentNode === _rng.endContainer.parentNode && _rng;
         }
     },
 
