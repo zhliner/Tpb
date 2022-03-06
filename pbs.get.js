@@ -379,21 +379,21 @@ const _Gets = {
      */
     sRange( evo, collapse ) {
         let _sel = window.getSelection(),
-            _rng = _sel.rangeCount > 0 ? _sel.getRangeAt(0) : null;
+            _rng = _sel.rangeCount > 0 && _sel.getRangeAt(0);
 
-        if ( !_rng || collapse === undefined ) {
-            return _rng;
+        if ( _rng ) {
+            switch ( collapse ) {
+                case '':
+                    return !_rng.collapsed && sameLevel( _rng ) && _rng;
+                case true:
+                    return _rng.collapsed && _rng;
+                case false:
+                    return !_rng.collapsed && _rng
+                case null:
+                    return sameLevel( _rng ) && _rng;
+            }
         }
-        switch ( collapse ) {
-            case '':
-                return !_rng.collapsed && _rng.startContainer.parentNode === _rng.endContainer.parentNode && _rng;
-            case true:
-                return _rng.collapsed && _rng;
-            case false:
-                return !_rng.collapsed && _rng
-            case null:
-                return _rng.startContainer.parentNode === _rng.endContainer.parentNode && _rng;
-        }
+        return _rng || null;
     },
 
     __sRange: null,
@@ -2321,6 +2321,17 @@ function movementValue( inc, val ) {
         return inc;
     }
     return inc < 0 ? -val : val;
+}
+
+
+/**
+ * 范围首尾是否在相同层级（正确嵌套）
+ * @param  {Range} rng 选区范围
+ * @return {Boolean}
+ */
+function sameLevel( rng ) {
+    return rng.startContainer === rng.endContainer ||
+        rng.startContainer.parentNode === rng.endContainer.parentNode;
 }
 
 
