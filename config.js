@@ -22,14 +22,6 @@ import { Loader, TplLoader } from "./tools/tloader.js";
 const
     DEBUG = true,
 
-    // OBT属性名定义
-    OBTA = {
-        on:     'on',
-        by:     'by',
-        to:     'to',
-        src:    'obt-src',
-    },
-
     // 本系模板管理器名称
     // 上级应用默认的模板系名称用一个空串表示。
     TplrName = '',
@@ -105,7 +97,6 @@ const tplInit = tplr => TplsPool.set( TplrName, tplr ) && tplr;
 
 export {
     DEBUG,
-    OBTA,
     TplrName,
     evnidDlmt,
     tplMaps,

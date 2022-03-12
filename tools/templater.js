@@ -21,12 +21,19 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
 
-import { OBTA } from "../config.js";
 import { Render } from "./render.js";
 
 
 const
     $ = (this || window).$,
+
+    // OBT属性名定义
+    OBTA = {
+        on:     'on',
+        by:     'by',
+        to:     'to',
+        src:    'obt-src',
+    },
 
     // 子模板分隔符
     // 注：tpl-node/source可定义多个子模板引用。
