@@ -430,6 +430,9 @@ clear(): void
 changes( extra?:Value ): void
 intoView( y:Number|String|true|false, x:Number|String): void
 
+unbind( evnid, slr, cap ): void
+// 解绑调用链绑定。
+
 
 // 事件调用/触发。
 // 目标：当前条目/栈顶1项。

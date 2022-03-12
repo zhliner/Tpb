@@ -14,7 +14,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
 
-import $, { DataStore, TplsPool, ChainStore, DEBUG, TplrName } from "./config.js";
+import $, { DataStore, TplsPool, ChainStore, DEBUG, TplrName, evnidDlmt } from "./config.js";
 import { Util } from "./tools/util.js";
 import { Ease } from "./tools/ease.js";
 import { bindMethod } from "./base.js";
@@ -405,6 +405,7 @@ const _Gets = {
      * 目标为范围限定元素，在范围内时才有效。
      * 如果压根就没有选区，返回null。
      * 如果选区不在限定元素内，返回false。
+     * 如果没有指定范围限定元素，简单返回选区对象。
      * 注：
      * 与上面的sRange不同，不区分选区是否折叠或规范嵌套。
      * strict实参仅在有范围限定时才有意义。
@@ -1300,15 +1301,15 @@ const _Gets = {
      * @return {Map<evnid:Cell>}
      */
     chains( evo, evnid, clone ) {
-        let _src = ChainStore.get( evo.data );
+        let _map = ChainStore.get( evo.data );
 
-        if ( !_src ) {
+        if ( !_map ) {
             return Promise.reject( chainUnfound );
         }
         if ( !evnid ) {
-            return mapAll( _src, clone );
+            return mapAll( _map, clone );
         }
-        return chainMap( _src, evnid.split(__reSpace), clone );
+        return mapChains( _map, evnid.split(__reSpace), clone );
     },
 
     __chains: 1,
@@ -1543,6 +1544,38 @@ const _Gets = {
     },
 
     __intoView: 1,
+
+
+    /**
+     * 解绑调用链绑定。
+     * 目标：暂存区1项可选。
+     * 解绑目标元素上绑定的事件处理器（调用链），调用链来源于目标元素上的预存储。
+     * 如果目标未定义，取当前绑定元素。
+     * 如果目标是一个集合，则各自解绑（提取来对应解绑）。
+     * evnid 支持空格分隔的多个标识名。
+     * 专用于 To.Update:bind|once() 的反向操作。
+     * 注记：
+     * 解绑 bind|once() 的处理器也可以用 To.Update:off() 来实现，
+     * 但如果特定于目标调用链的绑定解绑，则.off()稍微复杂（需要先提取目标调用链）。
+     * 此提供简单的专用版（且在On段）。
+     * @data: Element|[Element]
+     * @param  {String} evnid 事件名:ID序列
+     * @param  {String} slr 绑定时传递的选择器，可选
+     * @param  {Boolean} cap 是否为捕获，可选
+     * @return {void}
+     */
+    unbind( evo, evnid, slr, cap ) {
+        let _x = evo.data || evo.delegate;
+
+        if ( !$.isArray(_x) ) {
+            _x = [ _x ];
+        }
+        for ( const evid of evnid.split(__reSpace) ) {
+            unbindChain( _x, evid, slr, cap );
+        }
+    },
+
+    __unbind: -1,
 
 
 
@@ -2135,13 +2168,36 @@ function getData( map, name ) {
 
 
 /**
+ * 解绑调用链绑定（单个事件名标识）。
+ * 目标元素上绑定的只能是其自身预存储的调用链。
+ * @param  {[Element]} els 目标/存储元素（集）
+ * @param  {String} evnid 事件名:ID标识
+ * @param  {String} slr 委托选择器，可选
+ * @param  {Boolean} cap 是否为捕获，可选
+ * @return {void}
+ */
+function unbindChain( els, evnid, slr, cap ) {
+    for ( const el of els ) {
+        let _map = ChainStore.get( el ),
+            _cel = _map && _map.get( evnid );
+
+        if ( !_cel ) {
+            window.console.warn( `Pre-store chain is unfound with [${evnid}]` );
+            continue;
+        }
+        $.off( el, evnid.split(evnidDlmt, 1)[0], slr, _cel, cap );
+    }
+}
+
+
+/**
  * 获取调用链名值对。
  * @param  {Map} src 源存储集
  * @param  {[String]} evns 事件名标识集
  * @param  {Boolean} clone 是否克隆
  * @return {Map<evnid:Cell>}
  */
-function chainMap( src, evns, clone ) {
+function mapChains( src, evns, clone ) {
     let _buf = new Map();
 
     for (const nid of evns) {

@@ -34,6 +34,10 @@ const
     // 上级应用默认的模板系名称用一个空串表示。
     TplrName = '',
 
+    // 事件名：ID分隔符。
+    // 用于bind()|once()|unbind()中事件名ID的分离提取。
+    evnidDlmt = ':',
+
     // 模板映射集配置
     // 相对于上面的 tplRoot 根路径。
     tplMaps = 'maps.json';
@@ -101,9 +105,10 @@ const tplInit = tplr => TplsPool.set( TplrName, tplr ) && tplr;
 
 export {
     DEBUG,
-    tplMaps,
     OBTA,
     TplrName,
+    evnidDlmt,
+    tplMaps,
     EXTENT,
     ACCESS,
     JUMPCELL,

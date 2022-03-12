@@ -15,7 +15,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
 
-import $, { DataStore, ChainStore } from "./config.js";
+import $, { DataStore, ChainStore, evnidDlmt } from "./config.js";
 import { bindMethod, storeChain } from "./base.js";
 import { Get } from "./pbs.get.js";
 
@@ -24,10 +24,6 @@ import { Util } from "./tools/util.js";
 
 
 const
-    // 事件名：ID分隔符。
-    // 用于bind()事件名ID的分离提取。
-    __chrEvnid = ':',
-
     // 空白字符。
     // 用于bind()事件名ID序列分隔。
     __reSpace = /\s+/,
@@ -56,19 +52,20 @@ const
 const _Update = {
     /**
      * 绑定预定义调用链。
-     * 从目标元素自身提取预存储的调用链。
+     * 从目标元素自身提取预存储的调用链并绑定到目标自身。
      * evn支持空格分隔多个事件名，假值表示通配（目标上的全部存储）。
-     * 如果目标是一个集合，相同的事件名/选择器/初始数据被应用。
+     * 如果目标是一个集合，分别各自提取并绑定，但相同的事件名/选择器/初始数据被应用。
      * 提示：
-     * 如果需要绑定其它元素的调用链，可预先提取后使用on/one接口。
+     * 如果需要绑定其它元素的调用链，可提取后使用on/one接口。
      * @param  {Element|Collector} to 目标元素/集
      * @param  {Value|[Value]} ival 链头初始赋值
      * @param  {String} evnid 事件名ID/序列，可选
      * @param  {String} slr 委托选择器，可选
+     * @param  {Boolean} cap 是否为捕获，可选
      * @return {void}
      */
-    bind( to, ival, evnid, slr ) {
-        bindsChain( 'on', to, ival, evnid, slr );
+    bind( to, ival, evnid, slr, cap ) {
+        bindsChain( 'on', to, ival, evnid, slr, cap );
     },
 
 
@@ -79,10 +76,11 @@ const _Update = {
      * @param  {Value|[Value]} ival 链头初始赋值
      * @param  {String} evnid 事件名ID/序列，可选
      * @param  {String} slr 委托选择器，可选
+     * @param  {Boolean} cap 是否为捕获，可选
      * @return {void}
      */
-    once( to, ival, evnid, slr ) {
-        bindsChain( 'one', to, ival, evnid, slr );
+    once( to, ival, evnid, slr, cap ) {
+        bindsChain( 'one', to, ival, evnid, slr, cap );
     },
 
 
@@ -1015,11 +1013,12 @@ function setData( els, names, data, handle ) {
  * @param  {Map} map 存储集
  * @param  {[String]} evns 事件名序列
  * @param  {String} slr 选择器（共享），可选
+ * @param  {Boolean} cap 是否为捕获，可选
  * @param  {Value} ival 初始传入值（共享），可选
  * @param  {String} type 绑定方式
  * @return {void}
  */
-function bindEvns( el, map, evns, slr, ival, type ) {
+function bindEvns( el, map, evns, slr, cap, ival, type ) {
     if ( !evns ) {
         evns = [...map.keys()];
     }
@@ -1027,9 +1026,10 @@ function bindEvns( el, map, evns, slr, ival, type ) {
         if ( map.has(nid) ) {
             $[type](
                 el,
-                nid.split(__chrEvnid, 1)[0],
+                nid.split(evnidDlmt, 1)[0],
                 slr,
-                map.get(nid).setInit(ival)
+                map.get(nid).setInit(ival),
+                cap
             );
         }
     }
@@ -1039,41 +1039,45 @@ function bindEvns( el, map, evns, slr, ival, type ) {
 /**
  * 调用链绑定到事件。
  * 从延迟绑定存储中检索调用链并绑定到目标事件。
- * 重复绑定是有效的（可能传入不同的初始值）。
+ * 重复绑定是无效的（tQuery特性）。
+ * 注记：
+ * src和to实际上是同一个元素（当前实现）。
  * @param  {String} type 绑定方式（on|one）
  * @param  {Element} src 取值元素
  * @param  {Element} to 绑定元素
  * @param  {Value} ival 初始传入值（内容）
  * @param  {String} evnid 事件名ID/序列，可选
  * @param  {String} slr 委托选择器，可选
+ * @param  {Boolean} cap 是否为捕获，可选
  * @return {void}
  */
-function bindChain( type, src, to, ival, evnid, slr ) {
+function bindChain( type, src, to, ival, evnid, slr, cap ) {
     let _map = ChainStore.get( src );
 
     if ( !_map ) {
         return window.console.warn(`no storage on:`, src);
     }
-    return bindEvns( to, _map, evnid && evnid.split(__reSpace), slr, ival, type );
+    return bindEvns( to, _map, evnid && evnid.split(__reSpace), slr, cap, ival, type );
 }
 
 
 /**
  * 调用链绑定到事件（集合版）。
  * 从延迟绑定存储中检索调用链并绑定到目标事件。
- * 注：被重复绑定是有效的，可能传入不同的初始值。
+ * 注：重复绑定是无效的（tQuery特性）。
  * @param  {String} type 绑定方式（on|one）
  * @param  {Element|[Element]} to 绑定目标元素（集）
  * @param  {Value} ival 初始传入数据
  * @param  {String} evnid 事件名标识
- * @param  {String} slr 委托选择器
+ * @param  {String} slr 委托选择器，可选
+ * @param  {Boolean} cap 是否为捕获，可选
  * @return {void}
  */
-function bindsChain( type, to, ival, evnid, slr ) {
+function bindsChain( type, to, ival, evnid, slr, cap ) {
     if ( $.isArray(to) ) {
-        return to.forEach( el => bindChain(type, el, el, ival, evnid, slr) );
+        return to.forEach( el => bindChain(type, el, el, ival, evnid, slr, cap) );
     }
-    bindChain( type, to, to, ival, evnid, slr );
+    bindChain( type, to, to, ival, evnid, slr, cap );
 }
 
 

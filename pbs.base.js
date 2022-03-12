@@ -688,7 +688,7 @@ const _Control = {
 
 //
 // 计算&加工类。
-// 仅用于 On 域。
+// 仅用于 On/By/To:Next 三个域。
 //
 const _Process = {
 
