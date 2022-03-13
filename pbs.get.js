@@ -1866,7 +1866,7 @@ const _Gets = {
     'isCollector',  // ( val ): Boolean
     'type',         // ( val ): String
     'kvsMap',       // ( map, kname?, vname? ): [Object2]
-    'paths',        // ( el:Element, end?, slp?, slr? ): [Number]
+    'pathx',        // ( el:Element, end?, slp?, slr? ): [Number]
     'siblingNth',   // ( el:Element, slr? ): Number
 
     // 与concat效果类似，但会改变目标本身。

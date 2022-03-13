@@ -47,7 +47,7 @@
         <!--On: 构造章节选择器，定位显示到视口。
                 兼容ID锚跳转（不取消默认行为：avoid） -->
         <nav role="toc"
-            on="click(a)|evo(2) paths('nav[role=toc]', 'li') str('>section:nth-of-type(', ')') join str('/', '>h2') $('article') pop $(_1) intoView">
+            on="click(a)|evo(2) pathx('nav[role=toc]', 'li') str('>section:nth-of-type(', ')') join str('/', '>h2') $('article') pop $(_1) intoView">
             <h4>【目 录】</h4>
             <!-- click 子表标题（非<a>）折叠切换 -->
             <ol role="cascade"
