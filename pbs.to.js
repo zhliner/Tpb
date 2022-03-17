@@ -189,7 +189,7 @@ const _Update = {
      * @param  {String} evids 事件名ID序列，可选
      * @return {void}
      */
-    cloneChain( to, src, evids ) {
+    cloneChains( to, src, evids ) {
         let _map = ChainStore.get( src );
 
         if ( !_map ) {

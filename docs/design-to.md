@@ -185,7 +185,10 @@ trigger( name:String, bubble, cancelable:Boolean ): void
 triggers( name:String, bubble, cancelable:Boolean ): void
 // 发送事件到目标（元素与发送值分别对应版）。
 
-cloneEvents( evns:String|Function ):void
+cloneChains( evids:String ): void
+// 预存储调用链克隆。
+
+cloneEvents( evns:String|Function ): void
 // 事件处理器克隆。
 
 
