@@ -32,7 +32,7 @@ import { Util } from "./util.js";
 
 
 const
-    $ = (this || window).$,
+    $ = window.$,
 
     // 渲染标识特性。
     // 标记存在渲染定义的元素，用于高效检索（如配置克隆）。

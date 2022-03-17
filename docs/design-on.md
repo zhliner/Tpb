@@ -13,7 +13,8 @@
 事件名是一个标识串，首字母为字母，之后可以是字母、数字和 `[._:-]` 字符。另外，可前置一个特殊字符以表达固定的含义：
 
 - `^`：表示该事件为单次绑定。如：`^click` 的绑定将采用 `$.one("click', ...)`，而非 `$.on()`。
-- `@`：预定义调用链。该调用链不会被立即使用，实际上它只是一个存储（与当前元素关联），用户可通过在 `To` 段使用 `bind/once` 指令来应用它（提取并绑定）。相同的事件名可以附加ID后缀来分别，分隔符为一个冒号（`:`）。
+- `@`：预定义调用链。该调用链不会被立即使用，实际上它只是一个存储（与当前元素关联），用户可通过在 `To:Update` 段使用 `bind/once` 指令来应用它。相同的事件名可以附加ID后缀来分别，分隔符为一个冒号（`:`）。
+      注意：该标识符不可以与上面的 `^` 同时使用，如果是单次绑定，应由 `To:Update.once()` 实现。
 
 
 ## 格式用例
@@ -236,9 +237,6 @@ iskey(...ch:String|Number): Boolean
 // 判断是否为目标键位。
 
 chain( evnid:String, clone:Boolean ): Cell
-// 预存储调用链提取（单个）。
-
-chains( evnid:String, clone:Boolean ): Map<evnid:Cell>
 // 预存储调用链提取。
 
 timeOut( delay:Number|null, ...args ): timeoutID | void
@@ -430,7 +428,7 @@ clear(): void
 changes( extra?:Value ): void
 intoView( y:Number|String|true|false, x:Number|String): void
 
-unbind( evnid, slr, cap ): void
+unbind( evnid ): void
 // 解绑调用链绑定。
 
 

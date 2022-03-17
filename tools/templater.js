@@ -25,7 +25,7 @@ import { Render } from "./render.js";
 
 
 const
-    $ = (this || window).$,
+    $ = window.$,
 
     // OBT属性名定义
     OBTA = {
@@ -382,7 +382,6 @@ class Templater {
     * 节点树OBT构建。
     * 仅OBT处理，不包含渲染语法的解析。
     * @param  {Element|DocumentFragment} root 根节点
-    * @param  {Builder} obter OBT建造器实例
     * @return {Promise<void>}
     */
     _buildx( root ) {

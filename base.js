@@ -12,7 +12,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
 
-import $, { ACCESS, EXTENT, ChainStore } from "./config.js";
+import $, { ACCESS, EXTENT } from "./config.js";
 
 
 //
@@ -112,26 +112,6 @@ function hostSet( host, name, item, n ) {
 
 
 /**
- * 存储调用链。
- * 如果存在相同事件名，后者会覆盖前者。
- * 只有chain非假时才会存储，但空操作可以创建存储集。
- * @param  {Element} el 存储元素（定义所在）
- * @param  {String} evnid 事件名标识
- * @param  {EventListener} chain 调用链
- * @return {Map|Boolean} 存储集
- */
- function storeChain( el, evnid, chain ) {
-    let _map = ChainStore.get(el);
-
-    if ( !_map ) {
-        _map = new Map();
-        ChainStore.set( el, _map );
-    }
-    return chain && _map.set( evnid, chain );
-}
-
-
-/**
  * 获取目标子域。
  * 如果目标子域不存在，则自动创建。
  * 子域链上的子域必须是普通对象类型（Object）。
@@ -224,5 +204,4 @@ export {
     subObj,
     deepExtend,
     namedExtend,
-    storeChain,
 };

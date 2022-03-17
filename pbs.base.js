@@ -2138,21 +2138,18 @@ function cleanObj( obj, val, rep ) {
 
 
 /**
- * 延迟并跳跃。
+ * 延迟并跳脱。
  * 这会让执行流的连续性中断，跳过当前的事件处理流。
- * 这在摆脱事件流的连贯性时有用。
+ * 这在摆脱事件流的线性同步时有用。
  * 也可用于简单的延迟某些UI表达（如延迟隐藏）。
  * 注记：
- * 在当前指令单元（Cell）上暂存计数器。
+ * 返回计数器ID仅能用于取消，因此这里并不将之返回流程（注意花括号）。
  * @param  {Number} ms 延时毫秒数
  * @return {void}
  */
 function delay( evo, ms = 1 ) {
     return new Promise(
-        resolve => {
-            window.clearTimeout( this._delay );
-            this._delay = window.setTimeout( resolve, ms );
-        }
+        resolve => { window.setTimeout( resolve, ms ) }
     );
 }
 

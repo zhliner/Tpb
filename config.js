@@ -67,8 +67,8 @@ const
     DataStore = new WeakMap(),
 
     // 预定义调用链存储。
-    // 与元素关联，便于分组管理，同时支持空事件名通配。
-    // { Element: Map{evn:String: Chain} }
+    // 与元素关联，便于分组管理。
+    // { Element: Map{evnid:String: chain:Cell} }
     ChainStore = new WeakMap(),
 
     // 本系模板载入器。

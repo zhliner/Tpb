@@ -14,12 +14,12 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
 
-import $, { DataStore, TplsPool, ChainStore, DEBUG, TplrName, evnidDlmt } from "./config.js";
+import $, { DataStore, TplsPool, ChainStore, DEBUG, TplrName, evnidDlmt, HEADCELL } from "./config.js";
 import { Util } from "./tools/util.js";
 import { Ease } from "./tools/ease.js";
 import { bindMethod } from "./base.js";
 import { Process } from "./pbs.base.js";
-import { Stack } from "./core.js";
+import { chainClone } from "./core.js";
 
 
 const
@@ -1261,9 +1261,8 @@ const _Gets = {
      * 预存储调用链提取（单个）。
      * 目标：暂存区/栈顶1项。
      * 提取目标元素上预存储的调用链（链头指令实例）。
-     *
-     * 提取的调用链可直接用于实时的事件绑定/解绑（on|off|one）。
-     * 也可改为不同的事件名标识转存到新的元素便于使用（bind|once）。
+     * 提取的调用链可直接用于实时的事件绑定/解绑（on|off|one），
+     * 或者用于单独的调用（如 timeOut|timeTick）。
      * 注：
      * 克隆参数可用于新链头接收不同的初始值。
      * 如果没有目标存储集或目标调用链，返回错误并中断。
@@ -1274,10 +1273,10 @@ const _Gets = {
      */
     chain( evo, evnid, clone ) {
         let _map = ChainStore.get( evo.data ),
-            _cel = _map && _map.get( evnid );
+            _cell = _map && _map.get( evnid );
 
-        if ( _cel ) {
-            return clone ? cloneChain(_cel) : _cel;
+        if ( _cell ) {
+            return clone ? chainClone(_cell) : _cell;
         }
         return Promise.reject( chainUnfound2 );
     },
@@ -1286,39 +1285,9 @@ const _Gets = {
 
 
     /**
-     * 预存储调用链提取（批量）。
-     * 目标：暂存区/栈顶1项。
-     * 提取目标元素上预存储的调用链集。
-     * 主要用于预存储调用链的不同元素间转存（模板定义复用）。
-     * evnid 支持空格分隔多个名称指定。
-     * evnid 为空或假值表示通配，匹配目标元素上的全部预存储。
-     * clone 克隆会让调用链拥有一个新的数据栈。
-     * 错误：
-     * 如果目标元素没有预存储存储，返回错误并中断。
-     * @param  {String} evnid 事件名标识/序列
-     * @param  {Value|[Value]} ival 初始赋值，可选
-     * @param  {Boolean} clone 是否克隆，可选
-     * @return {Map<evnid:Cell>}
-     */
-    chains( evo, evnid, clone ) {
-        let _map = ChainStore.get( evo.data );
-
-        if ( !_map ) {
-            return Promise.reject( chainUnfound );
-        }
-        if ( !evnid ) {
-            return mapAll( _map, clone );
-        }
-        return mapChains( _map, evnid.split(__reSpace), clone );
-    },
-
-    __chains: 1,
-
-
-    /**
      * 创建/清除定时器。
      * 目标：暂存区/栈顶1项。
-     * 创建时目标为函数，可以是Cell实例（自动调用.handleEvent）。
+     * 创建时目标为函数，可以是Cell实例（EventListener）。
      * 清除时目标为定时器ID。
      * 创建和清除由 delay 实参表达: 数值时为创建，null时为清除。
      * 创建时返回一个定时器ID，清除时无返回值。
@@ -1373,24 +1342,23 @@ const _Gets = {
 
     /**
      * 创建缓动对象。
-     * 目标：暂存区1项可选。
-     * 目标为迭代总次数定义，可通过count实参覆盖。
-     * count的假值视为无穷大。
-     * 提示：新建的缓动对象可用 data 存储。
+     * 目标：暂存区/栈顶1项。
+     * 目标为缓动方式名（如 InOut）。
+     * 如果未传递count值，视为无限次数。
+     * @data: String kind 缓动方式
      * @param  {String} name 缓动名称（如 Cubic）
-     * @param  {String} kind 缓动方式（如 InOut）
      * @param  {Number} count 总迭代次数，可选
      * @return {Ease} 缓动实例
      */
-    ease( evo, name, kind, count ) {
+    ease( evo, name, count ) {
         return new Ease(
             name,
-            kind,
-            count || evo.data || Infinity
+            evo.data || 'In',
+            count || Infinity
         );
     },
 
-    __ease: -1,
+    __ease: 1,
 
 
     /**
@@ -1416,7 +1384,6 @@ const _Gets = {
      * 提示：
      * 作为 To:Query 的目标可用于绑定事件处理。
      * 可用 data 存储以备其它事件控制使用。
-     *
      * @param  {[Object]} kfs 关键帧对象集
      * @param  {Object} opts 动画配置对象
      * @return {Animation|[Animation]}
@@ -1548,34 +1515,31 @@ const _Gets = {
 
     /**
      * 解绑调用链绑定。
-     * 目标：暂存区1项可选。
+     * 目标：暂存区/栈顶1项。
      * 解绑目标元素上绑定的事件处理器（调用链），调用链来源于目标元素上的预存储。
-     * 如果目标未定义，取当前绑定元素。
-     * 如果目标是一个集合，则各自解绑（提取来对应解绑）。
+     * 目标可以是一个集合，对应提取各自解绑。
      * evnid 支持空格分隔的多个标识名。
      * 专用于 To.Update:bind|once() 的反向操作。
      * 注记：
      * 解绑 bind|once() 的处理器也可以用 To.Update:off() 来实现，
-     * 但如果特定于目标调用链的绑定解绑，则.off()稍微复杂（需要先提取目标调用链）。
-     * 此提供简单的专用版（且在On段）。
+     * 但这需要先提取调用链对象，且选择器和是否捕获需要与预定义保持一致。
+     * 此专用版便于使用（且在On段）。
      * @data: Element|[Element]
      * @param  {String} evnid 事件名:ID序列
-     * @param  {String} slr 绑定时传递的选择器，可选
-     * @param  {Boolean} cap 是否为捕获，可选
      * @return {void}
      */
-    unbind( evo, evnid, slr, cap ) {
-        let _x = evo.data || evo.delegate;
+    unbind( evo, evnid ) {
+        let _els = evo.data;
 
-        if ( !$.isArray(_x) ) {
-            _x = [ _x ];
+        if ( !$.isArray(_els) ) {
+            _els = [ _els ];
         }
-        for ( const evid of evnid.split(__reSpace) ) {
-            unbindChain( _x, evid, slr, cap );
+        for ( const id of evnid.trim().split(__reSpace) ) {
+            unbindChain( _els, id );
         }
     },
 
-    __unbind: -1,
+    __unbind: 1,
 
 
 
@@ -1596,7 +1560,7 @@ const _Gets = {
      * 因此用绝对像素值（event.pageX/pageY）重新实现。
      * 前值存储在事件当前元素（evo.current）上，解绑时应当重置（null）。
      * @param  {Number|null} val 固定值或存储清除标记
-     * @return {Number|void} 变化量（像素）
+     * @return {Number|void|null} 变化量（像素）
      */
     movementX( evo, val ) {
         let _el = evo.current;
@@ -1617,7 +1581,7 @@ const _Gets = {
      * 目标：无。
      * 说明参考上面movementX接口。
      * @param  {Number|null} val 固定值或存储清除标记
-     * @return {Number|void} 变化量（像素）
+     * @return {Number|void|null} 变化量（像素）
      */
     movementY( evo, val ) {
         let _el = evo.current;
@@ -1639,7 +1603,7 @@ const _Gets = {
      * 前值存储在事件当前元素上，因此目标元素的滚动量是特定于当前事件的。
      * 通常在事件解绑时移除该存储（传递null）。
      * @param  {null} nil 清除存储
-     * @return {Number|void} 变化量（像素）
+     * @return {Number|void|null} 变化量（像素）
      */
     scrolledX( evo, nil ) {
         let _box = evo.current,
@@ -1660,7 +1624,7 @@ const _Gets = {
      * 目标：暂存区1项可选。
      * 说明：（同上）
      * @param  {null} nil 清除存储
-     * @return {Number|void} 变化量（像素）
+     * @return {Number|void|null} 变化量（像素）
      */
     scrolledY( evo, nil ) {
         let _box = evo.current,
@@ -2172,80 +2136,21 @@ function getData( map, name ) {
  * 目标元素上绑定的只能是其自身预存储的调用链。
  * @param  {[Element]} els 目标/存储元素（集）
  * @param  {String} evnid 事件名:ID标识
- * @param  {String} slr 委托选择器，可选
- * @param  {Boolean} cap 是否为捕获，可选
  * @return {void}
  */
-function unbindChain( els, evnid, slr, cap ) {
+function unbindChain( els, evnid ) {
     for ( const el of els ) {
         let _map = ChainStore.get( el ),
-            _cel = _map && _map.get( evnid );
+            _cell = _map && _map.get( evnid );
 
-        if ( !_cel ) {
+        if ( !_cell ) {
             window.console.warn( `Pre-store chain is unfound with [${evnid}]` );
             continue;
         }
-        $.off( el, evnid.split(evnidDlmt, 1)[0], slr, _cel, cap );
+        let _evno = _cell[ HEADCELL ];
+
+        $.off( el, evnid.split(evnidDlmt, 1)[0], _evno.selector, _cell, _evno.capture );
     }
-}
-
-
-/**
- * 获取调用链名值对。
- * @param  {Map} src 源存储集
- * @param  {[String]} evns 事件名标识集
- * @param  {Boolean} clone 是否克隆
- * @return {Map<evnid:Cell>}
- */
-function mapChains( src, evns, clone ) {
-    let _buf = new Map();
-
-    for (const nid of evns) {
-        let _cell = src.get( nid );
-
-        if ( _cell ) {
-            _buf.set( nid, clone ? cloneChain(_cell) : _cell );
-        }
-    }
-    return _buf;
-}
-
-
-/**
- * 调用链存储集。
- * @param  {Map} map 源存储集
- * @param  {Boolean} clone 克隆方式
- * @return {Map}
- */
-function mapAll( map, clone ) {
-    let _buf = new Map();
-
-    for (const [n, cel] of map) {
-        _buf.set(
-            n,
-            clone ? cloneChain(cel) : cel
-        );
-    }
-    return _buf;
-}
-
-
-/**
- * 克隆调用链。
- * 会更新调用链全部指令上的数据栈引用。
- * @param  {Cell} cell 链头实例
- * @return {Cell} cell
- */
-function cloneChain( cell ) {
-    let _stack = new Stack(),
-        _first = cell.clone( _stack ),
-        _cell = _first;
-
-    while ( (cell = cell.next) ) {
-        _cell.next = cell.clone( _stack );
-        _cell = _cell.next;
-    }
-    return _first;
 }
 
 

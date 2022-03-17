@@ -18,7 +18,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
 
-import $, { ACCESS, EXTENT, JUMPCELL, PREVCELL, DEBUG, HEADCELL } from "./config.js";
+import $, { ACCESS, EXTENT, JUMPCELL, PREVCELL, DEBUG, HEADCELL, ChainStore } from "./config.js";
 import { Util } from "./tools/util.js";
 import { Spliter, UmpString, UmpCaller, UmpChars } from "./tools/spliter.js";
 
@@ -198,11 +198,11 @@ const Parser = {
      * @return {Array2}
      */
     on( fmt ) {
-        let [_ev, _ca] = __pipeSplit.split(fmt, 1);
+        let [_evn, _call] = __pipeSplit.split(fmt, 1);
 
         return [
-            this.evns( _ev ),
-            this.calls( zeroPass(_ca) )
+            this.evns( _evn ),
+            this.calls( zeroPass(_call) )
         ];
     },
 
@@ -239,10 +239,13 @@ const Parser = {
     /**
      * 分解事件名定义。
      * @param  {String} fmt 事件名定义序列
-     * @return {[Evn]|''}
+     * @return {[Evn]}
      */
     evns( fmt ) {
-        return fmt && this._parse( fmt, Evn );
+        if ( !fmt ) {
+            throw new Error( `Missing event name definition.` );
+        }
+        return this._parse( fmt, Evn );
     },
 
 
@@ -304,14 +307,12 @@ class Builder {
      *      next:   Object,
      * }
      * @param {Object} pbs OBT指令集
-     * @param {Function} store 调用链存储回调（storeChain）
      */
-    constructor( pbs, store ) {
+    constructor( pbs ) {
         this._pbson = pbs.on;
         this._pbsby = pbs.by;
         this._pbst2 = pbs.update;
         this._pbst3 = pbs.next;
-        this._store = store;
     }
 
 
@@ -320,73 +321,96 @@ class Builder {
      * OBT解析、创建调用链、绑定，存储预定义等。
      * 返回已解析绑定好的原始元素。
      * 注：
-     * 构建完毕后会向元素发送完成事件obted。
-     * 激发的事件不冒泡不可取消。
+     * 构建完毕后会向元素发送完成事件obted，不冒泡不可取消。
+     * 并列的多个事件定义指向同一条调用链（共享）。
      * @param  {Element|Object} obj 绑定目标
      * @param  {Object3} conf OBT配置集（{on,by,to}）
      * @return {Element|Object} obj
      */
     build( obj, conf ) {
-        if ( !conf.on ) return;
-
+        if ( !conf.on ) {
+            throw new Error( `OBT must be from "on"` );
+        }
         for (const obt of Parser.obts(conf) ) {
-            let _on = Parser.on(obt.on),
-                _by = Parser.by(obt.by),
-                _to = Parser.to(obt.to);
+            let _on = Parser.on( obt.on ),
+                _by = Parser.by( obt.by ),
+                _to = Parser.to( obt.to ),
+                _stack = new Stack();
 
-            this.bind(
+            this.binds(
                 obj,
                 _on[0],
-                this.chain(_on, _by, _to[0], _to[1], _to[2])
+                _stack,
+                this.chain( _stack, _on[1], _by, _to[0], _to[1], _to[2] )
             );
         }
-        $.trigger(obj, __obtDone, null, false, false);
+        $.trigger( obj, __obtDone, null, false, false );
+
         return obj;
     }
 
 
     /**
-     * 构建调用链。
-     * @param  {[[Evn], [Call]]} ons On调用序列
-     * @param  {[Call]} bys By调用序列
-     * @param  {Query} query To查询配置实例
-     * @param  {[Update]} updates To更新调用序列
-     * @param  {[Call]} nexts To下一阶调用序列
-     * @return {Cell} EventListener
+     * 事件定义集绑定。
+     * @param {Element|Object} its 绑定目标
+     * @param {[Evn]} evns 事件定义实例集
+     * @param {Stack} stack 调用链数据栈实例
+     * @param {Cell} chain  调用链首个指令（调用段，不含事件定义部分）
      */
-    chain( ons, bys, query, updates, nexts ) {
-        let _stack = new Stack(),
-            _first = Evn.apply( new Cell(_stack) ),
-            _prev = this._on( _first, _stack, ons[1] );
+    binds( its, evns, stack, chain ) {
+        for ( const evn of evns ) {
+            let _start = Evn.apply( new Cell(stack), evn );
+            _start.next = chain;
 
-        _prev = this._by( _prev, _stack, bys );
-        _prev = this._query( _prev, _stack, query );
-        _prev = this._update( _prev, _stack, updates );
-        this._nextStage( _prev, _stack, nexts );
-
-        return _first;
+            this.bind( its, evn, _start );
+        }
     }
 
 
     /**
      * 绑定事件到调用链。
      * 可能多个事件名定义对应一个调用链。
+     * 注：
+     * 此处的绑定不支持额外配置选项（{passive, signal}），
+     * 如果需要，用户可以在执行流中完成（bind()|on()）。
      * @param  {Element|Object} its 绑定目标
-     * @param  {[Evn]} evns 事件名定义序列
-     * @param  {Cell} chain 起始指令单元
+     * @param  {Evn} evn 事件定义实例
+     * @param  {Cell} chain 调用链起始指令（事件定义指令）
      * @return {void}
      */
-    bind( its, evns, chain ) {
-        for (const evn of evns) {
-            if ( evn.store ) {
-                this._store( its, evn.name, chain );
-                continue;
-            }
-            let _fn = evn.once ?
-                'one' :
-                'on';
-            $[_fn]( its, evn.name, evn.selector, chain, evn.capture );
+    bind( its, evn, chain ) {
+        if ( evn.store ) {
+            return storeChain( its, chain );
         }
+        let _fn = evn.once ?
+            'one' :
+            'on';
+        $[_fn]( its, evn.name, evn.selector, chain, evn.capture );
+    }
+
+
+    /**
+     * 构建调用链。
+     * 除事件定义之外的调用序列部分。
+     * 这样方便多个事件定义指令指向同一个调用链。
+     * @param  {Stack} stack 调用链数据栈实例
+     * @param  {[Call]} ons  On调用序列（事件定义之后部分）
+     * @param  {[Call]} bys  By调用序列
+     * @param  {Query} query To查询配置实例
+     * @param  {[Update]} updates To更新调用序列
+     * @param  {[Call]} nexts To下一阶调用序列
+     * @return {Cell} 调用链首个指令单元（不含事件定义部分）
+     */
+    chain( stack, ons, bys, query, updates, nexts ) {
+        let _hold = new Cell( stack ),
+            _prev = this._on( _hold, stack, ons );
+
+        _prev = this._by( _prev, stack, bys );
+        _prev = this._query( _prev, stack, query );
+        _prev = this._update( _prev, stack, updates );
+        this._nextStage( _prev, stack, nexts );
+
+        return _hold.next;  // 首个实际指令
     }
 
 
@@ -398,7 +422,7 @@ class Builder {
      * @param  {Cell} prev 前一个指令单元（首个）
      * @param  {Stack} stack 数据栈实例
      * @param  {[Call]} calls 调用配置序列
-     * @return {Cell} prev
+     * @return {Cell} 下一阶前导指令单元
      */
     _on( prev, stack, calls ) {
         if ( calls ) {
@@ -416,7 +440,7 @@ class Builder {
      * @param  {Cell} prev 前一个指令单元
      * @param  {Stack} stack 数据栈实例
      * @param  {[Call]} calls 调用配置序列
-     * @return {Cell}
+     * @return {Cell} 下一阶前导指令单元
      */
     _by( prev, stack, calls ) {
         if ( calls ) {
@@ -434,7 +458,7 @@ class Builder {
      * @param  {Cell} prev 前一个指令单元
      * @param  {Stack} stack 数据栈实例
      * @param  {Query} query To查询配置实例
-     * @return {Cell}
+     * @return {Cell} 下一阶前导指令单元
      */
     _query( prev, stack, query ) {
         return query ?
@@ -448,7 +472,7 @@ class Builder {
      * @param  {Cell} prev 前一个指令单元
      * @param  {Stack} stack 数据栈实例
      * @param  {[Update]} updates To更新配置实例集
-     * @return {Cell}
+     * @return {Cell} 下一阶前导指令单元
      */
     _update( prev, stack, updates ) {
         if ( updates ) {
@@ -466,7 +490,7 @@ class Builder {
      * @param  {Cell} prev 前一个指令单元
      * @param  {Stack} stack 数据栈实例
      * @param  {[Call]} nexts To下一阶实例集
-     * @return {Cell}
+     * @return {Cell} 下一阶前导指令单元
      */
     _nextStage( prev, stack, nexts ) {
         if ( nexts ) {
@@ -737,6 +761,7 @@ class Stack {
 // 保护Stack实例。
 const _SID = Symbol('stack-key');
 
+
 //
 // 指令调用单元。
 // 包含一个单向链表结构，实现执行流的链式调用逻辑。
@@ -761,7 +786,6 @@ class Cell {
         // this._rest;  // 补充模板实参数量
         // this._extra; // 初始启动传值
         // this._next;  // 原始.next（jump指令需要）
-        // this._delay; // 计数器存储（delay指令需要）
         // this._prev;  // 前阶指令存储
 
         if (prev) prev.next = this;
@@ -834,22 +858,6 @@ class Cell {
             this._next = cell;
         }
         return this._next;
-    }
-
-
-    /**
-     * 克隆当前指令实例。
-     * 主要用于链头不同的初始值赋值。
-     * @param  {Stack} stack 关联数据栈，可选
-     * @return {Cell} 新实例
-     */
-    clone( stack ) {
-        let _cell = Object.assign( new Cell(), this );
-
-        if ( stack ) {
-            _cell[_SID] = stack;
-        }
-        return _cell;
     }
 
 
@@ -948,6 +956,34 @@ class Cell {
         if ( n != null ) return this[_SID].data( n );
     }
 
+
+    /**
+     * 克隆当前指令实例。
+     * 浅克隆，方法的实参（._args）只是一个原值引用。
+     * 部分成员重写，以保持正确的链式逻辑。
+     * @param  {Stack} stack 关联数据栈
+     * @param  {Cell} prev 新链上的前一个指令单元。
+     * @return {Cell} 新实例
+     */
+    clone( stack, prev ) {
+        let _cell = Object.assign( new Cell(), this );
+
+        // 部分成员重写。
+        _cell[_SID] = stack;
+
+        if ( this._prev ) {
+            _cell.prev = prev;
+        }
+        if ( this._next ) {
+            _cell._next = true;
+        }
+        if ( prev ) {
+            prev.next = _cell;
+            if ( prev._next === true ) prev._next = _cell;
+        }
+        return _cell;
+    }
+
 }
 
 
@@ -972,7 +1008,7 @@ class Evn {
      * @param {String} name 格式化名称
      */
     constructor( name ) {
-        let _vs = name.match(__onEvent);
+        let _vs = name.match( __onEvent );
         if ( !_vs ) {
             throw new Error(`[${name}] is invalid`);
         }
@@ -1011,15 +1047,15 @@ class Evn {
 
     /**
      * 起始指令对象绑定。
-     * 设置链头标识便于外部判断。
+     * 设置链头 HEADCELL 属性值为本实例，可枚举以便于克隆。
      * @param  {Cell} cell 指令单元
-     * @param  {[Evn]} evns 事件名定义集
+     * @param  {Evn} evn 事件定义实例
      * @return {Cell} cell
      */
-    static apply( cell ) {
+    static apply( cell, evn ) {
         Reflect.defineProperty(cell, HEADCELL, {
-            value: true,
-            enumerable: false,
+            value: evn,
+            enumerable: true,
         });
         return cell.build( null, empty );
     }
@@ -1327,6 +1363,41 @@ function methodSelf( name, obj ) {
 }
 
 
+/**
+ * 存储调用链。
+ * @param {Element} to 存储到目标
+ * @param {Cell} cell 调用链起始指令实例
+ */
+function storeChain( to, cell ) {
+    let _map = ChainStore.get( to );
+
+    if ( !_map ) {
+        _map = new Map();
+        ChainStore.set( to, _map );
+    }
+    _map.set( cell[HEADCELL].name, cell );
+}
+
+
+/**
+ * 调用链克隆。
+ * 会创建一条新的调用链，包括一个新的数据栈。
+ * 但指令内的PB方法的实参只是一个引用，共享相同的数据源。
+ * @param  {Cell} cell 调用链起始指令实例
+ * @return {Cell} 新链起始指令实例
+ */
+function chainClone( cell ) {
+    let _stack = new Stack(),
+        _first = cell.clone( _stack ),
+        _prev = _first;
+
+    while ( (cell = cell.next) ) {
+        _prev = cell.clone( _stack, _prev );
+    }
+    return _first;
+}
+
+
 
 /**
  * Promise失败显示。
@@ -1418,4 +1489,4 @@ function update( evo, ...rest ) {
 ///////////////////////////////////////////////////////////////////////////////
 
 
-export { Builder, Stack }
+export { Builder, chainClone, storeChain }

@@ -15,9 +15,10 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
 
-import $, { DataStore, ChainStore, evnidDlmt } from "./config.js";
-import { bindMethod, storeChain } from "./base.js";
+import $, { DataStore, ChainStore, evnidDlmt, HEADCELL } from "./config.js";
+import { bindMethod } from "./base.js";
 import { Get } from "./pbs.get.js";
+import { chainClone, storeChain } from "./core.js";
 
 import { Render } from "./tools/render.js";
 import { Util } from "./tools/util.js";
@@ -57,15 +58,14 @@ const _Update = {
      * 如果目标是一个集合，分别各自提取并绑定，但相同的事件名/选择器/初始数据被应用。
      * 提示：
      * 如果需要绑定其它元素的调用链，可提取后使用on/one接口。
-     * @param  {Element|Collector} to 目标元素/集
-     * @param  {Value|[Value]} ival 链头初始赋值
+     * @to: {Element|Collector} to 目标元素/集
+     * @data: {Value|[Value]} ival 链头初始赋值
      * @param  {String} evnid 事件名ID/序列，可选
-     * @param  {String} slr 委托选择器，可选
-     * @param  {Boolean} cap 是否为捕获，可选
+     * @param  {Object} opts 额外选项（{passive, signal}），可选
      * @return {void}
      */
-    bind( to, ival, evnid, slr, cap ) {
-        bindsChain( 'on', to, ival, evnid, slr, cap );
+    bind( to, ival, evnid, opts ) {
+        bindsChain( 'on', to, ival, evnid, opts );
     },
 
 
@@ -75,12 +75,68 @@ const _Update = {
      * @param  {Element|Collector} to 目标元素/集
      * @param  {Value|[Value]} ival 链头初始赋值
      * @param  {String} evnid 事件名ID/序列，可选
-     * @param  {String} slr 委托选择器，可选
-     * @param  {Boolean} cap 是否为捕获，可选
      * @return {void}
      */
-    once( to, ival, evnid, slr, cap ) {
-        bindsChain( 'one', to, ival, evnid, slr, cap );
+    once( to, ival, evnid ) {
+        bindsChain( 'one', to, ival, evnid );
+    },
+
+
+    /**
+     * 事件处理器绑定。
+     * 目标为一个集合时返回Collector实例，
+     * 否则无返回值。
+     * @to:   Element|[Element] to 目标元素（集）
+     * @data: EventListener|Function|false|null handler 事件处理器
+     * @param  {String} evn 事件名
+     * @param  {String|null} slr 委托选择器，可选
+     * @param  {Boolean} cap 是否在捕获阶段，可选
+     * @param  {Object} opts 额外选项（{passive, signal}），可选
+     * @return {Collector|void}
+     */
+    on( to, handler, evn, slr, cap, opts ) {
+        if ( $.isArray(to) ) {
+            return $(to).on( evn, slr, handler, cap, opts );
+        }
+        $.on( to, evn, slr, cap, opts );
+    },
+
+
+    /**
+     * 事件处理器绑定。
+     * 目标为一个集合时返回Collector实例，
+     * 否则无返回值。
+     * @to:   Element|[Element] to 目标元素（集）
+     * @data: EventListener|Function|false|null handler 事件处理器
+     * @param  {String} evn 事件名
+     * @param  {String|null} slr 委托选择器，可选
+     * @param  {Boolean} cap 是否在捕获阶段，可选
+     * @return {Collector|void}
+     */
+    one( to, handler, evn, slr, cap ) {
+        if ( $.isArray(to) ) {
+            return $(to).one( evn, slr, handler, cap );
+        }
+        $.one( to, evn, slr, cap );
+    },
+
+
+    /**
+     * 事件处理器绑定。
+     * 目标为一个集合时返回Collector实例，
+     * 否则无返回值。
+     * @to:   Element|[Element] to 目标元素（集）
+     * @data: EventListener|Function|false|null handler 事件处理器
+     * @param  {String} evn 事件名
+     * @param  {String|null} slr 委托选择器，可选
+     * @param  {Boolean} cap 是否在捕获阶段，可选
+     * @return {Collector|void}
+     */
+    off( to, handler, evn, slr, cap ) {
+        if ( $.isArray(to) ) {
+            return $(to).off( evn, slr, handler, cap );
+        }
+        $.off( to, evn, slr, cap );
     },
 
 
@@ -123,10 +179,38 @@ const _Update = {
 
 
     /**
+     * 预存储调用链克隆存储。
+     * 因为预存储的调用链严格关联存储到的容器元素，
+     * 所以克隆是必要的，否则难以复用。
+     * 事件名标识支持空格分隔的多个名称以用于过滤，只有匹配的才会克隆。
+     * 若未传递evids，视为克隆源元素上的全部。
+     * @to: {Element|Collector} to 目标元素（集）
+     * @data: {Element} src 存储源元素
+     * @param  {String} evids 事件名ID序列，可选
+     * @return {void}
+     */
+    cloneChain( to, src, evids ) {
+        let _map = ChainStore.get( src );
+
+        if ( !_map ) {
+            return window.console.warn( `chains of pre-store is empty on [${src}]` );
+        }
+        chainStores(
+            $.isArray(to) ? to : [to],
+            _map,
+            evids ? evids.trim().split(__reSpace) : [..._map.keys()]
+        );
+    },
+
+
+    /**
      * 事件处理器克隆。
      * 将内容元素上的事件处理器克隆到目标元素（集）上。
      * 事件名可为空格分隔的多个名称。
      * 如果目标为一个集合，源也为集合时，则为一一对应关系。
+     * 注记：
+     * 需要同时克隆源元素上预存储的调用链实例，
+     * 因为预存储的调用链只能绑定到作为存储键的目标元素。
      * @param  {Element|Collector} to 目标元素（集）
      * @param  {Element|[Element]} src 事件源元素（集）
      * @param  {String|Function} evns 事件名序列或过滤函数，可选
@@ -361,39 +445,6 @@ const _Update = {
             );
         }
         to.forEach( el => getMap(DataStore, el).set(name, data) );
-    },
-
-
-    /**
-     * 调用链存储（单个）。
-     * 如果目标是元素集合，单个调用链会存储到多个目标。
-     * @param  {Element|Collector} to 存储目标
-     * @param  {Cell} cell 链头部指令
-     * @param  {String} evnid 事件名标识
-     * @return {void}
-     */
-    chain( to, cell, evnid ) {
-        if ( $.isArray(to) ) {
-            return to.forEach( el => storeChain(el, evnid, cell) );
-        }
-        storeChain( to, evnid, cell );
-    },
-
-
-    /**
-     * 存储调用链集。
-     * 事件名标识与调用链是作为Map的键值传递的，
-     * 这里不能修改事件名标识（若需此能力请使用chain）。
-     * 相同的调用链集会存储到全部目标元素上。
-     * @param  {Element|Collector} to 存储目标
-     * @param  {Map<evnid:Cell>} cells
-     * @return {void}
-     */
-    chains( to, cells ) {
-        if ( $.isArray(to) ) {
-            return to.forEach( el => chainSaves(el, cells) );
-        }
-        chainSaves( to, cells );
     },
 
 };
@@ -637,42 +688,6 @@ const _Update = {
         }
         $[meth]( to, name, val, arg );
     }
-});
-
-
-
-//
-// 事件绑定。
-// 内容：事件处理器或 undefined（off）。
-//=========================================================
-[
-    'on',
-    'one',
-    'off',
-]
-.forEach(function( meth ) {
-    /**
-     * 目标为数组时返回目标的Collector封装。
-     * 目标为元素时保持不变。
-     * 注意：传递ival时处理器必须为调用链头（Cell）。
-     * @to: Element|Collector 目标元素（集）
-     * @data: EventListener|Function|false|null|undefined} handler 事件处理器
-     * @param  {String} evn 事件名（序列）
-     * @param  {String} slr 委托选择器，可选
-     * @param  {Value} ival 调用链初始赋值，可选
-     * @return {Collector|void}
-     */
-    _Update[meth] = function( to, handler, evn, slr, ival ) {
-        if ( ival !== undefined ) {
-            // 适用 Cell
-            handler.setInit( ival );
-        }
-        if ( $.isArray(to) ) {
-            return $(to)[meth]( evn, slr, handler );
-        }
-        $[meth]( to, evn, slr, handler );
-    };
-
 });
 
 
@@ -1011,27 +1026,32 @@ function setData( els, names, data, handle ) {
  * 注意：切分事件名和附加ID以首个冒号为分界。
  * @param  {Element} el 绑定目标
  * @param  {Map} map 存储集
- * @param  {[String]} evns 事件名序列
- * @param  {String} slr 选择器（共享），可选
- * @param  {Boolean} cap 是否为捕获，可选
- * @param  {Value} ival 初始传入值（共享），可选
+ * @param  {[String]} evnids 事件名&ID序列
+ * @param  {Object} opts 额外选项（{passive, signal}）
+ * @param  {Value} ival 初始传入值（共享）
  * @param  {String} type 绑定方式
  * @return {void}
  */
-function bindEvns( el, map, evns, slr, cap, ival, type ) {
-    if ( !evns ) {
-        evns = [...map.keys()];
+function bindEvns( el, map, evnids, opts, ival, type ) {
+    if ( !evnids ) {
+        evnids = [ ...map.keys() ];
     }
-    for ( const nid of evns ) {
-        if ( map.has(nid) ) {
-            $[type](
-                el,
-                nid.split(evnidDlmt, 1)[0],
-                slr,
-                map.get(nid).setInit(ival),
-                cap
-            );
+    for ( const eid of evnids ) {
+        let _cell = map.get( eid ),
+            _evno = _cell && _cell[ HEADCELL ];
+
+        if ( !_evno ) {
+            window.console.warn( `have not chain by "${eid}"` );
+            continue;
         }
+        $[type](
+            el,
+            eid.split( evnidDlmt, 1 )[0],
+            _evno.selector,
+            _cell.setInit( ival ),
+            _evno.capture,
+            opts
+        );
     }
 }
 
@@ -1043,21 +1063,19 @@ function bindEvns( el, map, evns, slr, cap, ival, type ) {
  * 注记：
  * src和to实际上是同一个元素（当前实现）。
  * @param  {String} type 绑定方式（on|one）
- * @param  {Element} src 取值元素
- * @param  {Element} to 绑定元素
+ * @param  {Element} el 取值&绑定元素
  * @param  {Value} ival 初始传入值（内容）
  * @param  {String} evnid 事件名ID/序列，可选
- * @param  {String} slr 委托选择器，可选
- * @param  {Boolean} cap 是否为捕获，可选
+ * @param  {Object} opts 额外选项（{passive, signal}），可选
  * @return {void}
  */
-function bindChain( type, src, to, ival, evnid, slr, cap ) {
-    let _map = ChainStore.get( src );
+function bindChain( type, el, ival, evnid, opts ) {
+    let _map = ChainStore.get( el );
 
     if ( !_map ) {
-        return window.console.warn(`no storage on:`, src);
+        return window.console.warn( `have not storage on:`, el );
     }
-    return bindEvns( to, _map, evnid && evnid.split(__reSpace), slr, cap, ival, type );
+    return bindEvns( el, _map, evnid && evnid.split(__reSpace), opts, ival, type );
 }
 
 
@@ -1069,25 +1087,35 @@ function bindChain( type, src, to, ival, evnid, slr, cap ) {
  * @param  {Element|[Element]} to 绑定目标元素（集）
  * @param  {Value} ival 初始传入数据
  * @param  {String} evnid 事件名标识
- * @param  {String} slr 委托选择器，可选
- * @param  {Boolean} cap 是否为捕获，可选
+ * @param  {Object} opts 额外选项（{passive, signal}），可选
  * @return {void}
  */
-function bindsChain( type, to, ival, evnid, slr, cap ) {
+function bindsChain( type, to, ival, evnid, opts ) {
     if ( $.isArray(to) ) {
-        return to.forEach( el => bindChain(type, el, el, ival, evnid, slr, cap) );
+        return to.forEach( el => bindChain(type, el, ival, evnid, opts) );
     }
-    bindChain( type, to, to, ival, evnid, slr, cap );
+    bindChain( type, to, ival, evnid, opts );
 }
 
 
 /**
  * 存储调用链。
- * @param {Element} el 存储元素
- * @param {Map} cmap 调用链存储集
+ * 在每一个目标元素上存储新的调用链集。
+ * @param  {[Element]} els 目标元素集
+ * @param  {Map<String, Cell>} map 源调用链存储集
+ * @param  {[String]} keys 存储目标标识集
+ * @return {void}
  */
-function chainSaves( el, cmap ) {
-    for (const [n, cell] of cmap) storeChain( el, n, cell );
+function chainStores( els, map, keys ) {
+    for ( const eid of keys ) {
+        let _head = map.get( eid );
+
+        if ( !_head ) {
+            window.console.warn( `pre-store chain is unfound with [${eid}]` );
+            continue;
+        }
+        els.forEach( el => storeChain(el, chainClone(_head)) );
+    }
 }
 
 

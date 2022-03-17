@@ -19,7 +19,7 @@
 
 import { format } from "./date.js";
 
-const $ = (this || window).$;
+const $ = window.$;
 
 
 //

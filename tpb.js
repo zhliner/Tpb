@@ -39,7 +39,7 @@ import { By } from "./pbs.by.js";
 import { To } from "./pbs.to.js";
 
 import $, { DEBUG, TLoader, tplInit, DataStore, TplsPool, TplrName } from "./config.js";
-import { storeChain, hostSet, namedExtend, deepExtend, funcSets } from "./base.js";
+import { hostSet, namedExtend, deepExtend, funcSets } from "./base.js";
 import { App } from "./app.js";
 import { Builder } from "./core.js";
 
@@ -253,17 +253,15 @@ function cmvApp( by, name, conf, meths = [] ) {
  * To部分不支持用户扩展，因此无参数传入。
  * @param  {Object} on On定义集，可选
  * @param  {Object} by By定义集，可选
- * @return {Builder}
+ * @return {Builder} 构建器实例
  */
 function obtBuilder( on, by ) {
     return new Builder({
-            on: on || On,
-            by: by || By,
-            update: To.Update,
-            next:   To.Next,
-        },
-        storeChain
-    );
+        on: on || On,
+        by: by || By,
+        update: To.Update,
+        next:   To.Next,
+    });
 }
 
 

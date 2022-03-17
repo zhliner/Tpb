@@ -220,12 +220,6 @@ only( name:String ): void
 data( name:String ): void
 // 存储关联数据。
 
-chain( evnid:String ): void
-// 存储调用链（单个）。
-
-chains(): void
-// 存储调用链集。
-
 pba(): void
 // PB参数设置。
 
