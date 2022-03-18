@@ -57,7 +57,8 @@ const
     PREVCELL = Symbol( 'set prev Cell'),
 
     // 调用链头实例标记。
-    HEADCELL = Symbol( 'first-cell' ),
+    // 用于链头中存储事件名定义实例（Evn）
+    HEADCELL = Symbol( 'head-cell' ),
 
     // 全局变量空间。
     Globals = new Map(),

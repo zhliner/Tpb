@@ -354,7 +354,7 @@ class Builder {
      * 事件定义集绑定。
      * @param {Element|Object} its 绑定目标
      * @param {[Evn]} evns 事件定义实例集
-     * @param {Stack} stack 调用链数据栈实例
+     * @param {Stack} stack 调用链数据栈实例（共享）
      * @param {Cell} chain  调用链首个指令（调用段，不含事件定义部分）
      */
     binds( its, evns, stack, chain ) {
@@ -781,12 +781,15 @@ class Cell {
         this._meth = null;
 
         // 惰性成员（按需添加）：
-        // this._args;  // 实参序列
-        // this._want;  // 取项数量
-        // this._rest;  // 补充模板实参数量
-        // this._extra; // 初始启动传值
-        // this._next;  // 原始.next（jump指令需要）
-        // this._prev;  // 前阶指令存储
+        // this._args   // 实参序列
+        // this._want   // 取项数量
+        // this._rest   // 补充模板实参数量
+        // this._extra  // 初始启动传值
+        // this._next   // 原始.next（jump指令需要）
+        // this._prev   // 前阶指令存储
+
+        // 链头指令专有
+        // this[HEADCELL]: {Evn}
 
         if (prev) prev.next = this;
     }
@@ -801,11 +804,10 @@ class Cell {
      * @return {Value}
      */
     handleEvent( ev, elo ) {
-        elo.event = ev;
         this[_SID].reset();
 
-        //:debug
-        DEBUG && window.DEBUG && window.console.info( ev.type, elo );
+        elo.event = ev;
+        elo.chain = this;
 
         return this.call( elo, this._extra );
     }

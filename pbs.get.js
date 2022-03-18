@@ -25,7 +25,7 @@ import { chainClone } from "./core.js";
 const
     // evo成员名/值键。
     evoIndex = {
-        0: 'event',     // 原生事件对象（注：ev指令可直接获取）
+        0: 'chain',     // 调用链自身（链头Cell）
         1: 'target',    // 事件起点元素（event.target）
         2: 'current',   // 触发事件的当前元素（event.currentTarget|matched）
         3: 'delegate',  // 委托绑定的元素（event.currentTarget）
@@ -34,6 +34,7 @@ const
         7: 'entry',     // 中段入口（迭代重入）
         10: 'primary',  // To检索结果
         11: 'updated',  // To更新目标/集（动态变化）
+        // event:       // 当前事件对象（内部使用，不提供数字索引）
     },
 
     // 归类键区。
@@ -77,8 +78,7 @@ const
 // 几个出错中断提示信息。
 const
     dataUnfound = 'data-store is undefined.',
-    chainUnfound = 'err:pre-store chain is unfound.',
-    chainUnfound2 = 'err:chain-store is undefined or chain unfound.';
+    chainUnfound = 'err:chain-store is undefined or chain unfound.';
 
 
 
@@ -167,7 +167,9 @@ const _Gets = {
      * 目标：无。
      * 特权：是，判断取值。
      * 如果name未定义或为null，取evo自身入栈。
-     * 如果明确取.data属性，会取暂存区全部成员（清空）。
+     * 提示：
+     * - chain  获取链头，可用于解绑当前调用链。
+     * - data   会取出暂存区全部成员。
      * @param  {Stack} stack 数据栈
      * @param  {String|Number} name 成员名称或代码
      * @return {Element|Value|[Value]}
@@ -1278,7 +1280,7 @@ const _Gets = {
         if ( _cell ) {
             return clone ? chainClone(_cell) : _cell;
         }
-        return Promise.reject( chainUnfound2 );
+        return Promise.reject( chainUnfound );
     },
 
     __chain: 1,
