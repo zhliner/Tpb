@@ -1293,7 +1293,7 @@ class Update {
      */
     apply( cell, pbs ) {
         let _f = methodSelf(this._meth, pbs);
-        return cell.build( this._args, update.bind(_f), false, 1 );
+        return cell.build( this._args, update.bind(null, _f), false, 1 );
     }
 
 
@@ -1472,16 +1472,26 @@ function query2( evo, slr, beg, one, flr ) {
 
 /**
  * To：更新方法（单个）。
- * 注：非undefined返回值会更新目标自身。
+ * 非undefined返回值会更新目标自身。
+ * 注记：
+ * 在OBT的非更新部分可通过pass|end实现流程中断控制。
+ * 更新段通过抛出异常向往传递中断信号。
+ * @param  {Function} func To更新函数
  * @param  {Object} evo 事件关联对象
  * @param  {...Value} rest 剩余实参序列（最终）
- * @return {void}
+ * @return {void|Promise.reject}
  */
-function update( evo, ...rest ) {
-    let _val = this(
-        evo.updated, evo.data, ...rest
-    );
-    if ( _val !== undefined ) evo.updated = _val;
+function update( fun, evo, ...rest ) {
+    try {
+        let _val = fun(
+            evo.updated, evo.data, ...rest
+        );
+        if ( _val !== undefined ) evo.updated = _val;
+    }
+    catch ( err ) {
+        // 空消息为静默中断
+        return Promise.reject( err.message );
+    }
 }
 
 

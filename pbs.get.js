@@ -1506,10 +1506,11 @@ const _Gets = {
      * }
      * @param  {Number|String|true|false} y 垂直位置标识
      * @param  {Number|String} x 水平位置标识
+     * @param  {Boolean} smooth 平滑模式
      * @return {void}
      */
-    intoView( evo, y, x ) {
-        $.intoView( evo.data, y, x );
+    intoView( evo, y, x, smooth ) {
+        $.intoView( evo.data, y, x, smooth );
     },
 
     __intoView: 1,

@@ -251,16 +251,17 @@ const _Update = {
      * 注记：不影响未设置方向的现有位置。
      * @param  {Element|Collector} to 目标元素/集
      * @param  {Array2|Object2|Number} pos 位置配置
+     * @param  {Boolean} smooth 是否平滑滚动，可选
      * @return {Collector|void}
      */
-    scroll( to, pos ) {
+    scroll( to, pos, smooth ) {
         pos = scrollObj( pos );
 
         if ( $.isArray(to) ) {
             to = $( to );
-            requestAnimationFrame( () => to.scroll(pos) );
+            requestAnimationFrame( () => to.scroll(pos, smooth) );
         } else {
-            requestAnimationFrame( () => $.scroll(to, pos) );
+            requestAnimationFrame( () => $.scroll(to, pos, smooth) );
         }
     },
 
@@ -641,12 +642,10 @@ const _Update = {
 //
 // UI视觉变化类。
 // 会调用requestAnimationFrame()以缓解闪烁。
-//
+//---------------------------------------------------------
 [
     'width',
     'height',
-    'scrollTop',
-    'scrollLeft',
 ]
 .forEach(function( meth ) {
     /**
@@ -657,8 +656,7 @@ const _Update = {
      */
     _Update[meth] = function( to, val, inc ) {
         if ( $.isArray(to) ) {
-            to = $( to );
-            requestAnimationFrame( () => to[meth](val, inc) );
+            requestAnimationFrame( () => to.forEach( el => $[meth](el, val, inc) ) );
         } else {
             requestAnimationFrame( () => $[meth](to, val, inc) );
         }
@@ -667,9 +665,35 @@ const _Update = {
 
 
 //
+// UI视觉变化类。
+// 会调用requestAnimationFrame()以缓解闪烁。
+//---------------------------------------------------------
+[
+    'scrollTop',
+    'scrollLeft',
+]
+.forEach(function( meth ) {
+    /**
+     * @to: Element|Collector 目标元素（集）
+     * @data: Number 宽高像素值
+     * @param  {Boolean} inc 是否为增量设置
+     * @param  {Boolean} smooth 是否平滑滚动
+     * @return {void}
+     */
+    _Update[meth] = function( to, val, inc, smooth ) {
+        if ( $.isArray(to) ) {
+            requestAnimationFrame( () => to.forEach( el => $[meth](el, val, inc, smooth) ) );
+        } else {
+            requestAnimationFrame( () => $[meth](to, val, inc, smooth) );
+        }
+    }
+});
+
+
+//
 // 注意名值参数顺序。
 // 无取值逻辑，故集合版友好返回Collector封装。
-//
+//---------------------------------------------------------
 [
     'toggleAttr',   // ignore
     'toggleStyle',  // equal
@@ -903,11 +927,12 @@ const _Next = {
      * rid默认匹配evo.updated。
      * @param {Number|String|true|false} y 垂直位置标识
      * @param {Number} x 水平位置标识
+     * @param {Boolean} smooth 平滑模式
      * @param {String|Number} 目标元素标识，可选
      * @param {Boolean} much 是否检索多个目标，可选
      */
-    intoView( evo, y, x, rid = 11, much ) {
-        $( _target(evo, rid, !much) ).forEach( el => $.intoView( el, y, x ) );
+    intoView( evo, y, x, smooth, rid = 11, much ) {
+        $( _target(evo, rid, !much) ).forEach( el => $.intoView( el, y, x, smooth ) );
     },
 
     __intoView: null,
