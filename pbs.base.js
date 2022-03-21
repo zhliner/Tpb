@@ -123,6 +123,25 @@ const _Control = {
 
 
     /**
+     * 延迟并跳脱。
+     * 这会让执行流的连续性中断，跳过当前的事件处理流。
+     * 这在摆脱事件流的线性同步时有用。
+     * 也可用于简单的延迟某些UI表达（如延迟隐藏）。
+     * 注记：
+     * 返回计数器ID仅能用于取消，因此这里并不将之返回流程（注意花括号）。
+     * @param  {Number} ms 延时毫秒数
+     * @return {void}
+     */
+    delay( evo, ms = 1 ) {
+        return new Promise(
+            resolve => { window.setTimeout( resolve, ms ) }
+        );
+    },
+
+    __delay: null,
+
+
+    /**
      * 阻止事件默认行为。
      * 目标：暂存区1项。
      * 如果目标非空，则真值停止，否则无条件阻止。
@@ -2133,27 +2152,8 @@ function cleanObj( obj, val, rep ) {
 
 //
 // 特殊指令（Control）。
-// this: {Cell} （无预绑定）
+// 无预绑定，需要方法指令实例自身 this: {Cell}
 ///////////////////////////////////////////////////////////////////////////////
-
-
-/**
- * 延迟并跳脱。
- * 这会让执行流的连续性中断，跳过当前的事件处理流。
- * 这在摆脱事件流的线性同步时有用。
- * 也可用于简单的延迟某些UI表达（如延迟隐藏）。
- * 注记：
- * 返回计数器ID仅能用于取消，因此这里并不将之返回流程（注意花括号）。
- * @param  {Number} ms 延时毫秒数
- * @return {void}
- */
-function delay( evo, ms = 1 ) {
-    return new Promise(
-        resolve => { window.setTimeout( resolve, ms ) }
-    );
-}
-
-// delay[EXTENT] = null;
 
 
 /**
@@ -2251,8 +2251,9 @@ function propectLoop( i, msg ) {
  * 目标：无。
  * 特权：是，数据栈显示。
  * 注：该指令在To段的使用仅限于Next-Stage部分。
- * @param  {Value|false|true} msg 显示消息，传递false中断执行流
- * @return {void|reject}
+ * @param  {Stack} stack 数据栈实例
+ * @param  {Value|Boolean} msg 显示消息，传递false中断执行流
+ * @return {void|Promise.reject}
  */
 function debug( evo, stack, msg = '' ) {
     window.console.info( msg, {
@@ -2285,9 +2286,8 @@ const Control = $.assign( {}, _Control, bindMethod );
 
 //
 // 特殊控制。
-// 无预绑定处理。this:{Cell}
+// 无预绑定直接赋值。this:{Cell}
 //
-Control.delay = delay;
 Control.prune = prune;
 Control.jump  = jump;
 Control.entry = entry;

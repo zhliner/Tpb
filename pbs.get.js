@@ -1571,7 +1571,7 @@ const _Gets = {
         if ( val !== null ) {
             let _v = _el[__movementX];
             // n - undefined == NaN => 0
-            return movementValue( (_el[__movementX] = evo.event.pageX) - _v || 0, +val );
+            return movementValue( (_el[__movementX] = evo.event.screenX) - _v || 0, +val );
         }
         delete _el[__movementX];
     },
@@ -1591,7 +1591,7 @@ const _Gets = {
 
         if ( val !== null ) {
             let _v = _el[__movementY];
-            return movementValue( (_el[__movementY] = evo.event.pageY) - _v || 0, +val );
+            return movementValue( (_el[__movementY] = evo.event.screenY) - _v || 0, +val );
         }
         delete _el[__movementY];
     },
@@ -2276,11 +2276,16 @@ function strictMatch( names, set ) {
 
 /**
  * 鼠标移动固定替换值。
+ * 问题：
+ * - chrome 中鼠标移动距离计算偏小，很像鼠标移动后的位置取值滞后。
+ * - firefox 中同样的计算和UI表现正常。
+ * devicePixelRatio: 1.5
  * @param  {Number} inc 指针移动量
  * @param  {Number|void} val 替换值
  * @return {Number}
  */
 function movementValue( inc, val ) {
+    // window.console.info( inc );
     if ( inc === 0 || isNaN(val) ) {
         return inc;
     }

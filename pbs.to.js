@@ -15,7 +15,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
 
-import $, { DataStore, ChainStore, evnidDlmt, HEADCELL } from "./config.js";
+import $, { DataStore, ChainStore, evnidDlmt, ACCESS, HEADCELL, UPDATEX } from "./config.js";
 import { bindMethod } from "./base.js";
 import { Get } from "./pbs.get.js";
 import { chainClone, storeChain } from "./core.js";
@@ -611,12 +611,14 @@ const _Update = {
 // 多余实参无副作用。
 //---------------------------------------------------------
 [
-    'val',          // val: {Value|[Value]|Function}
-    'offset',       // val: {top:Number, left:Number}|null
-    'addClass',     // name: {String|Function}
-    'removeClass',  // name: {String|Function}
-    'toggleClass',  // name: {String|Function|Boolean}, (force:Boolean)
-    'removeAttr',   // name: {String|Function}
+    'val',          // val:{Value|[Value]|Function}
+    'offset',       // val:{top:Number, left:Number}|null
+    'scrollTop',    // val:Number, inc, smooth:Boolean
+    'scrollLeft',   // val:Number, inc, smooth:Boolean
+    'addClass',     // name:{String|Function}
+    'removeClass',  // name:{String|Function}
+    'toggleClass',  // name:{String|Function|Boolean}, (force:Boolean)
+    'removeAttr',   // name:{String|Function}
 ]
 .forEach(function( meth ) {
     /**
@@ -640,51 +642,39 @@ const _Update = {
 
 
 //
-// UI视觉变化类。
-// 会调用requestAnimationFrame()以缓解闪烁。
+// 优化：布局类。
+// 调用requestAnimationFrame()以缓解闪烁。
 //---------------------------------------------------------
 [
     'width',
     'height',
 ]
 .forEach(function( meth ) {
+    let _sum = 0,
+        _ani = false;
     /**
+     * 单帧单次执行：
+     * - 单帧内增量积累，用于下一帧一次性设置。
+     * - 单帧执行期间返回false，如果后续存在执行流且依赖于每次执行，
+     *   则可能需要判断是否中断（pass|end），因为这里并没有实际执行（只是累计）。
      * @to: Element|Collector 目标元素（集）
      * @data: Number 宽高像素值
      * @param  {Boolean} inc 是否为增量设置
-     * @return {void}
+     * @return {false|void}
      */
     _Update[meth] = function( to, val, inc ) {
-        if ( $.isArray(to) ) {
-            requestAnimationFrame( () => to.forEach( el => $[meth](el, val, inc) ) );
-        } else {
-            requestAnimationFrame( () => $[meth](to, val, inc) );
-        }
-    }
-});
+        _sum += val;
+        if ( _ani ) return false;
 
+        _ani = true;
+        if ( inc ) val = _sum;
 
-//
-// UI视觉变化类。
-// 会调用requestAnimationFrame()以缓解闪烁。
-//---------------------------------------------------------
-[
-    'scrollTop',
-    'scrollLeft',
-]
-.forEach(function( meth ) {
-    /**
-     * @to: Element|Collector 目标元素（集）
-     * @data: Number 宽高像素值
-     * @param  {Boolean} inc 是否为增量设置
-     * @param  {Boolean} smooth 是否平滑滚动
-     * @return {void}
-     */
-    _Update[meth] = function( to, val, inc, smooth ) {
         if ( $.isArray(to) ) {
-            requestAnimationFrame( () => to.forEach( el => $[meth](el, val, inc, smooth) ) );
+            requestAnimationFrame(
+                () => to.forEach( el => $[meth](el, val, inc) ) || ( _sum = _ani = false )
+            );
         } else {
-            requestAnimationFrame( () => $[meth](to, val, inc, smooth) );
+            requestAnimationFrame( () => $[meth](to, val, inc) && (_sum = _ani = false) );
         }
     }
 });
@@ -1264,6 +1254,86 @@ function _target( evo, rid, one ) {
 
 
 //
+// Update特殊指令。
+///////////////////////////////////////////////////////////////////////////////
+
+
+/**
+ * 通过性检查。
+ * 检查Update的更新值是否为真（非假）或为实参序列之一（===），
+ * 结果为假会中断执行流。
+ * 注：无需Cell实例，故预绑定null。
+ * @data: void
+ * @param  {...Value} vals 对比值集，可选
+ * @return {void|reject}
+ */
+const pass_ =
+(function pass( evo, ...vals ) {
+    let _v = evo.updated
+
+    if ( vals.length ) {
+        _v = vals.includes(_v);
+    }
+    if ( !_v ) return Promise.reject();
+})
+.bind( null );
+
+pass_[ UPDATEX ] = true;
+
+
+/**
+ * 流程结束。
+ * 检查Update的更新值是否为真（非假）或为实参序列之一（===），
+ * 结果为真会结束执行流。
+ * 注：无需Cell实例，故预绑定null。
+ * @data: void
+ * @param  {...Value} vals 对比值集，可选
+ * @return {void|reject}
+ */
+const end_ =
+(function end( evo, ...vals ) {
+    let _v = evo.updated;
+
+    if ( vals.length ) {
+        _v = vals.includes(_v);
+    }
+    if ( _v ) return Promise.reject();
+})
+.bind( null );
+
+end_[ UPDATEX ] = true;
+
+
+/**
+ * 调试显示。
+ * 注记：
+ * 与Get.debug相同，但新建一个以设置UPDATEX标志，
+ * 这在Update段指令构建时需要。
+ * @param  {Stack} stack 数据栈实例
+ * @param  {String|Boolean} msg 显示消息，传递false中断执行流
+ * @return {void|Promise.reject}
+ */
+function debug( evo, stack, msg = '' ) {
+    window.console.info( msg, {
+        ev: evo.event,
+        evo,
+        next: this.next,
+        tmp: stack._tmp.slice(),
+        buf: stack._buf.slice()
+    });
+    if ( msg === true ) {
+        // eslint-disable-next-line no-debugger
+        debugger;
+    }
+    if ( msg === false ) return Promise.reject();
+}
+
+debug[ACCESS] = true;
+debug[UPDATEX] = true;
+
+
+
+//
 // 预处理&导出。
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -1279,5 +1349,12 @@ const To = {
     // @proto: Get < Process < Control
     Next:   $.proto( $.assign({}, _Next, bindMethod), Get )
 };
+
+
+// 纳入集合
+To.Update.pass = pass_;
+To.Update.end = end_;
+To.Update.debug = debug;
+
 
 export { To };

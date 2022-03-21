@@ -18,7 +18,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
 
-import $, { ACCESS, EXTENT, JUMPCELL, PREVCELL, DEBUG, HEADCELL, ChainStore } from "./config.js";
+import $, { ACCESS, EXTENT, JUMPCELL, PREVCELL, UPDATEX, HEADCELL, DEBUG, ChainStore } from "./config.js";
 import { Util } from "./tools/util.js";
 import { Spliter, UmpString, UmpCaller, UmpChars } from "./tools/spliter.js";
 
@@ -882,6 +882,7 @@ class Cell {
         if ( args ) {
             this._args = args;
         }
+        // 友好：null|undefined 等效
         if ( n != null ) {
             this._want = n;
         }
@@ -1286,14 +1287,24 @@ class Update {
 
     /**
      * 应用更新设置。
-     * 更新函数接口：function(Element|Collector, dataValue, ...rest): Value|void
      * @param  {Cell} cell 指令单元
      * @param  {Object} pbs 更新方法集
      * @return {Cell} cell
      */
     apply( cell, pbs ) {
-        let _f = methodSelf(this._meth, pbs);
-        return cell.build( this._args, update.bind(null, _f), false, 1 );
+        let _f = methodSelf( this._meth, pbs );
+        if ( !_f ) {
+            throw new Error(`${this._meth} is not in pbs:Update.`);
+        }
+        // pass|end|debug
+        // 无取栈数量要求，不自动取流程数据。
+        // 注：模板实参不在此列。
+        if ( _f[UPDATEX] ) {
+            return cell.build( this._args, _f, _f[ACCESS] );
+        }
+        // bound update:
+        // function( Element|Collector, dataValue, ...rest ): Value|void
+        return cell.build( this._args, update.bind(null, _f), _f[ACCESS], 1 );
     }
 
 
@@ -1482,16 +1493,10 @@ function query2( evo, slr, beg, one, flr ) {
  * @return {void|Promise.reject}
  */
 function update( fun, evo, ...rest ) {
-    try {
-        let _val = fun(
-            evo.updated, evo.data, ...rest
-        );
-        if ( _val !== undefined ) evo.updated = _val;
-    }
-    catch ( err ) {
-        // 空消息为静默中断
-        return Promise.reject( err.message );
-    }
+    let _val = fun(
+        evo.updated, evo.data, ...rest
+    );
+    if ( _val !== undefined ) evo.updated = _val;
 }
 
 

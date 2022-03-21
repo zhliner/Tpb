@@ -85,7 +85,8 @@ function funcSets( f, n, ix ) {
     if ( ix ) {
         f[ ACCESS ] = true;
     }
-    if ( n !== undefined ) {
+    // null|undefined
+    if ( n != null ) {
         f[ EXTENT ] = n;
     }
     return f;
