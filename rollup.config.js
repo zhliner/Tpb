@@ -14,7 +14,6 @@ export default {
     // 排除工具集和配置文件捆绑。
     external: [
         './config.js',
-        /\/tquery\/w+\.js/,
-        /\/tools\/\w+\.js/,
+        /\/tools\/[\w.]+\.js/,
     ],
 }
