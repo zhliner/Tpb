@@ -650,31 +650,30 @@ const _Update = {
     'height',
 ]
 .forEach(function( meth ) {
-    let _sum = 0,
-        _ani = false;
+    let _ani = false;
     /**
      * 单帧单次执行：
-     * - 单帧内增量积累，用于下一帧一次性设置。
-     * - 单帧执行期间返回false，如果后续存在执行流且依赖于每次执行，
-     *   则可能需要判断是否中断（pass|end），因为这里并没有实际执行（只是累计）。
+     * 单帧执行期间返回false，如果后续存在执行流且依赖于每次执行，
+     * 则可能需要判断是否中断（pass|end），因为这里并没有实际执行。
+     * 注记：
+     * 多次触发的值并不积累，否则不均衡的设置依然会引发跳动（视觉）。
      * @to: Element|Collector 目标元素（集）
      * @data: Number 宽高像素值
      * @param  {Boolean} inc 是否为增量设置
      * @return {false|void}
      */
     _Update[meth] = function( to, val, inc ) {
-        _sum += val;
-        if ( _ani ) return false;
-
+        if ( _ani ) {
+            return false;
+        }
         _ani = true;
-        if ( inc ) val = _sum;
 
         if ( $.isArray(to) ) {
             requestAnimationFrame(
-                () => to.forEach( el => $[meth](el, val, inc) ) || ( _sum = _ani = false )
+                () => to.forEach( el => $[meth](el, val, inc) ) || ( _ani = false )
             );
         } else {
-            requestAnimationFrame( () => $[meth](to, val, inc) && (_sum = _ani = false) );
+            requestAnimationFrame( () => $[meth](to, val, inc) && ( _ani = false) );
         }
     }
 });
