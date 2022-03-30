@@ -1484,9 +1484,6 @@ function query2( evo, slr, beg, one, flr ) {
 /**
  * To：更新方法（单个）。
  * 非undefined返回值会更新目标自身。
- * 注记：
- * 在OBT的非更新部分可通过pass|end实现流程中断控制。
- * 更新段通过抛出异常向往传递中断信号。
  * @param  {Function} func To更新函数
  * @param  {Object} evo 事件关联对象
  * @param  {...Value} rest 剩余实参序列（最终）

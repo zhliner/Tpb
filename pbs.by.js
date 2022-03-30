@@ -35,6 +35,7 @@ import { bindMethod } from "./base.js";
 import { Get } from "./pbs.get.js";
 
 import { Render } from "./tools/render.js";
+import { Util } from "./tools/util.js";
 
 
 const _By = {
@@ -56,28 +57,56 @@ const _By = {
 
     /**
      * 在当前DOM中插入脚本。
-     * @data: Element box 容器元素，可选
-     * @param  {String|Object} data 脚本代码或配置对象
+     * 如果传入box，脚本元素插入其内部末尾（并保留）。
+     * 支持box传入选择器即时检索目标容器，选择器支持二阶检索（以当前绑定元素为起点）。
+     * 如果未传入box，脚本容器为<head>且会即时删除。
+     * @data: String|Object 脚本代码或配置对象
+     * @param  {String|Element} box 容器元素或其选择器，可选
      * @return {Element|Promise<Element>}
      */
-    script( evo, data ) {
-        return $.script( data, evo.data );
+    script( evo, box ) {
+        if ( typeof box === 'string' ) {
+            box = Util.find( box, evo.delegate, true );
+        }
+        return $.script( evo.data, box );
     },
 
-    __script: -1,
+    __script: 1,
 
 
     /**
      * 在当前DOM中插入样式元素
-     * @data: Element Next 参考元素，可选
-     * @param  {String|Object} data 样式代码或配置对象
+     * 如果传入next，则插入其前面，否则插入<head>内末尾。
+     * 如果next是选择器，支持二阶查询（以当前绑定元素为起点）。
+     * @data: String|Object 样式代码或配置对象
+     * @param  {String|Element} next 参考元素或其选择器，可选
      * @return {Element|Promise<Element>}
      */
-    style( evo, data ) {
-        return $.style( data, evo.data );
+    style( evo, next ) {
+        if ( typeof next === 'string' ) {
+            next = Util.find( next, evo.delegate, true );
+        }
+        return $.style( evo.data, next );
     },
 
-    __style: -1,
+    __style: 1,
+
+
+    /**
+     * 载入外部资源。
+     * 如果data已经是一个元素则直接插入，
+     * 否则data视为配置对象构建一个<link>元素插入。
+     * 仅用于可触发 load 事件的元素（如<img>）。
+     * @data: Object|Element 配置对象或游离元素
+     * @param  {Node} next 插入参考位置（下一个节点）
+     * @param  {Element} box 插入的目标容器，可选
+     * @return {Promise<Element>} 载入承诺
+     */
+    loadin( evo, next, box ) {
+        return $.loadin( evo.data, next, box );
+    },
+
+    __loadin: 1,
 
 
     /**

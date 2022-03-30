@@ -11,11 +11,14 @@
 render( data:Value ): Element
 // 模板节点渲染。
 
-script( data:String|Object ): Element|Promise<Element>
+script( box:String|Element ): Element|Promise<Element>
 // 插入脚本代码或引入URL脚本。
 
-style( data:String|Object ): Element|Promise<Element>
+style( next:String|Element ): Element|Promise<Element>
 // 插入样式代码或引入样式URL资源。
+
+loadin( data, next, box ): Promise<Element>
+// 载入外部资源。
 
 GET( type, url:String ): Promise<[type]>
 // 获取远端数据。

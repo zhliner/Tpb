@@ -397,38 +397,39 @@ const _Control = {
 
 
     /**
-     * 栈顶复制（浅）。
-     * 复制栈顶项入栈，支持复制多份。
+     * 栈顶浅复制入栈。
+     * 支持复制栈顶多项，数据按原顺序展开。
+     * 默认仅复制栈顶1项。
      * 目标：无。
      * 特权：是，自行入栈。
-     * 注记：不会取出栈顶项，因此复制1份时栈顶即有2份。
      * @param  {Stack} stack 数据栈
-     * @param  {Number} cnt 复制份数，可选
+     * @param  {Number} n 复制项数，可选
      * @return {void}
      */
-    dup( evo, stack, cnt = 1 ) {
-        let _val = stack.tops(1)[0];
-        while ( cnt-- > 0 ) stack.push( _val );
+    dup( evo, stack, n = 1 ) {
+        if ( n > 0 ) {
+            stack.push( ...stack.tops(n) );
+        }
     },
 
     __dup_x: true,
 
 
     /**
-     * 栈顶复制（浅）。
-     * 复制栈顶n项并入栈（原样展开）。
+     * 栈顶浅复制入栈。
+     * 复制栈顶项n次。
+     * 不会取出栈顶项，因此复制1份时栈顶即有2份。
      * 目标：无。
      * 特权：是，灵活取栈&自行入栈。
-     * 例：
-     * dups(1) 与 dup(1) 效果相同。
+     * 提示：
+     * 仅针对单项时，dups, dups(1), dup, dup(1) 效果相同。
      * @param  {Stack} stack 数据栈
-     * @param  {Number} n 条目数，可选
+     * @param  {Number} cnt 复制份数，可选
      * @return {void}
      */
-    dups( evo, stack, n = 1 ) {
-        if ( n > 0 ) {
-            stack.push( ...stack.tops(n) );
-        }
+    dups( evo, stack, cnt = 1 ) {
+        let _val = stack.tops(1)[0];
+        while ( cnt-- > 0 ) stack.push( _val );
     },
 
     __dups_x: true,

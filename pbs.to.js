@@ -607,7 +607,7 @@ const _Update = {
 
 //
 // 其它特性操作。
-// 内容：单一数据。
+// 部分接口有取值逻辑，故此无返回值（避免误操作）。
 // 多余实参无副作用。
 //---------------------------------------------------------
 [
@@ -615,16 +615,10 @@ const _Update = {
     'offset',       // val:{top:Number, left:Number}|null
     'scrollTop',    // val:Number, inc, smooth:Boolean
     'scrollLeft',   // val:Number, inc, smooth:Boolean
-    'addClass',     // name:{String|Function}
-    'removeClass',  // name:{String|Function}
     'toggleClass',  // name:{String|Function|Boolean}, (force:Boolean)
-    'removeAttr',   // name:{String|Function}
 ]
 .forEach(function( meth ) {
     /**
-     * 注记：
-     * 部分方法有取值逻辑，
-     * 预防用户错误使用，故此不返回Collector封装。
      * @param  {Element|Collector} to 目标元素/集
      * @param  {Value} data 数据内容
      * @param  {...Value} args 额外参数
@@ -636,6 +630,27 @@ const _Update = {
         } else {
             $[meth]( to, data, ...args );
         }
+    };
+
+});
+
+
+//
+// 单一参数操作。
+//---------------------------------------------------------
+[
+    'addClass',
+    'removeClass',
+    'removeAttr',
+]
+.forEach(function( meth ) {
+    /**
+     * @param  {Element|[Element]} to 目标元素/集
+     * @param  {String|Function} data 内容数据（名称）
+     * @return {Element|Collector} to
+     */
+    _Update[meth] = function( to, data ) {
+        return $.isArray(to) ? $(to)[meth]( data ) : $[meth]( to, data );
     };
 
 });
