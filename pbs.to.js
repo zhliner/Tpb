@@ -252,7 +252,7 @@ const _Update = {
      * @param  {Element|Collector} to 目标元素/集
      * @param  {Array2|Object2|Number} pos 位置配置
      * @param  {Boolean} smooth 是否平滑滚动，可选
-     * @return {Collector|void}
+     * @return {void}
      */
     scroll( to, pos, smooth ) {
         pos = scrollObj( pos );
@@ -665,31 +665,28 @@ const _Update = {
     'height',
 ]
 .forEach(function( meth ) {
-    let _ani = false;
+    let _break = false;
     /**
      * 单帧单次执行：
      * 单帧执行期间返回false，如果后续存在执行流且依赖于每次执行，
      * 则可能需要判断是否中断（pass|end），因为这里并没有实际执行。
      * 注记：
      * 多次触发的值并不积累，否则不均衡的设置依然会引发跳动（视觉）。
+     * 采用单帧模式需要明确传递smooth为真。
      * @to: Element|Collector 目标元素（集）
      * @data: Number 宽高像素值
      * @param  {Boolean} inc 是否为增量设置
+     * @param  {Boolean} smoosh 采用平滑模式（逐帧变化）
      * @return {false|void}
      */
-    _Update[meth] = function( to, val, inc ) {
-        if ( _ani ) {
-            return false;
+    _Update[meth] = function( to, val, inc, smooth ) {
+        if ( !smooth ) {
+            return changeSize( to, meth, val, inc );
         }
-        _ani = true;
+        if ( _break ) return false;
+        _break = true;
 
-        if ( $.isArray(to) ) {
-            requestAnimationFrame(
-                () => to.forEach( el => $[meth](el, val, inc) ) || ( _ani = false )
-            );
-        } else {
-            requestAnimationFrame( () => $[meth](to, val, inc) && ( _ani = false) );
-        }
+        requestAnimationFrame( () => (_break = false) || changeSize(to, meth, val, inc) );
     }
 });
 
@@ -1184,13 +1181,27 @@ function message( el, msg, long ) {
  * @return {Object2}
  */
 function scrollObj( pos ) {
-    if ( $.type(pos) == 'Object' ) {
-        return pos;
-    }
     if ( typeof pos == 'number' ) {
         return { top: pos };
     }
-    return { left: pos[0], top: pos[1] };
+    return $.isArray(pos) ? { left: pos[0], top: pos[1] } : pos;
+}
+
+
+/**
+ * 设置/改变元素尺寸（宽高）。
+ * @param  {Element|[Element]} to 目标元素（集）
+ * @param  {String} meth 设置方法（width|height）
+ * @param  {Number} val 目标值或增量值
+ * @param  {Boolean} inc 是否为增量改变
+ * @return {void}
+ */
+function changeSize( to, meth, val, inc ) {
+    if ( $.isArray(to) ) {
+        to.forEach( el => $[meth](el, val, inc) );
+    } else {
+        $[meth]( to, val, inc );
+    }
 }
 
 

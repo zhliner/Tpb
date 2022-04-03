@@ -139,14 +139,14 @@ fillWith( clone, event, eventdeep:Boolean ): Collector
 // 简单设置。
 // 注释内为内容类型。
 /////////////////////////////////////////////////
-height( inc:Boolean ): Collector|void          // {Number}
-width( inc:Boolean ): Collector|void           // {Number}
+height( inc, smooth:Boolean ): void|false       // {Number}
+width( inc, smooth:Boolean ): void|false        // {Number}
 scroll(): Collector|void                        // {top:Number, left:Number}
-scrollTop( inc:Boolean ): Collector|void       // {Number}
-scrollLeft( inc:Boolean ): Collector|void      // {Number}
+scrollTop( inc, smooth:Boolean ): void          // {Number}
+scrollLeft( inc, smooth:Boolean ): void         // {Number}
 addClass(): Collector|void                      // {String|Function}
 removeClass(): Collector|void                   // {String|Function}
-toggleClass( force:Boolean ): Collector|void   // {String|Function|Boolean}
+toggleClass( force:Boolean ): Collector|void    // {String|Function|Boolean}
 removeAttr(): Collector|void                    // {String|Function}
 val(): Collector|void                           // {Value|[Value]|Function}
 offset(): Collector|void                        // {top:Number, left:Number}
@@ -155,28 +155,28 @@ offset(): Collector|void                        // {top:Number, left:Number}
 //
 // 特性/属性/样式设置。
 /////////////////////////////////////////////////
-attr( name:String ): Collector|void
-attribute( names:String ): Collector|void
+attr( name:String ): void
+attribute( names:String ): void
 toggleAttr( name:String, i:Boolean ): Collector|void
-prop( name:String ): Collector|void
-property( names:String ): Collector|void
-css( name:String ): Collector|void
-cssSets( names:String ): Collector|void
+prop( name:String ): void
+property( names:String ): void
+css( name:String ): void
+cssSets( names:String ): void
 toggleStyle( name:String, equal:Boolean ): Collector|void
 
 
 //
 // 事件处理。
 /////////////////////////////////////////////////
-bind( evnid:String, slr:String ): void
+bind( evnid:String, opts:Object ): void
 // 绑定预定义调用链。
 
-once( evnid:String, slr:String ): void
+once( evnid:String ): void
 // 绑定预定义调用链单次处理。
 
-on( evn:String, slr:String ): Collector|void
-one( evn:String, slr:String ): Collector|void
-off( evn:String, slr:String ): Collector|void
+on( evn, slr:String, cap:Boolean, opts:Object ): Collector|void
+one( evn, slr:String, cap:Boolean ): Collector|void
+off( evn, slr:String, cap:Boolean ): Collector|void
 // 事件绑定/解绑。
 
 trigger( name:String, bubble, cancelable:Boolean ): void
