@@ -39,15 +39,19 @@ const
 
     // 归类键区。
     // 用于 iskey 方法判断键位（Event.key）。
+    // 键值大于键盘可输入的最大数字键。
     __keyArea = {
-        1:  /^(?:F[0-9]+)$/,
-        2:  /^(?:F[0-9]+$|^Escape)$/,
-        3:  /^(?:Home|End|PgUp|PgDn)$/,
-        4:  /^(?:Arrow(?:Up|Left|Down|Right))$/,
-        5:  /^(?:Enter|Delete|Backspace)$/,
+        10: /^[0-9]$/,                  // 纯数字
+        11: /^[a-zA-Z]$/,               // 纯字母
+        12: /^[0-9a-zA-Z]$/,            // 纯字母&数字
+        13: /^F[0-9]+$/i,               // F1-F10
+        14: /^(?:F[0-9]+|Escape)$/i,    // F1-F10, ESC
+        15: /^(?:Home|End|PgUp|PgDn)$/,
+        16: /^(?:Arrow(?:Up|Left|Down|Right))$/,
+        17: /^(?:Enter|Delete|Backspace)$/,
 
         // 浏览器编辑快捷键目标（<b><i><u>）
-        6:  /^(?:b|i|u)$/i,
+        20: /^(?:b|i|u)$/i,
     },
 
     // 修饰键属性名。
@@ -1240,11 +1244,15 @@ const _Gets = {
      * 目标：无。
      * 指定数字键时需要包含引号，而不是直接的数值。
      * 数值实参表达约定的键区：
-     * - 1: F1-F12 功能键系列。
-     * - 2: F1-F12 功能键系列（含ESC键）。
-     * - 3: Home/End/PgUp/PgDn 4个页面键。
-     * - 4: 四个箭头键（← → ↑ ↓）。
-     * - 5: 会导致换行变化的3个编辑键（无选取情况下）。
+     * - 11:  纯数字键。
+     * - 12:  纯字母键。
+     * - 13:  纯数字&字母键。
+     * - 14:  F1-F12 功能键系列。
+     * - 15:  F1-F12 功能键系列（含ESC键）。
+     * - 16:  Home/End/PgUp/PgDn 4个页面键。
+     * - 17:  四个箭头键（← → ↑ ↓）。
+     * - 18:  会导致换行变化的3个编辑键（无选取情况下）。
+     * - 20:  浏览器编辑（contenteditable）支持的3个快捷键：<b><i><u>
      * @param  {...String|Number} keys 键名序列或键区值
      * @return {Boolean}
      */
@@ -1252,7 +1260,7 @@ const _Gets = {
         let _k = evo.event.key;
 
         return keys.some(
-            v => typeof v === 'number' ? __keyArea[v].test(_k) : _k === v
+            v => v > 9 ? __keyArea[v].test(_k) : _k === v
         );
     },
 
