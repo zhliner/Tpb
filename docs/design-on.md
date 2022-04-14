@@ -93,11 +93,8 @@ call( meth:String, ...rest:Value ): Value
 calls( meths:String, ...args:Value ): [Value]
 // 调用目标的多个方法。
 
-valo( name:String ): Object{name:value}
-// 获取目标名称的控件值集。
-
-value( name:String ): Value | [Value] | null
-// 获取控件值。
+valobj( names:String ): Object{name:value}
+// 获取控件名值对对象。
 
 checked( name:String ): Boolean | [Boolean] | null
 // 获取选取按钮状态。
@@ -352,7 +349,8 @@ now( json?:Boolean ): Number|String
 is( slr:String ): Boolean
 isXML(): Boolean
 controls(): [Element]
-serialize( ...names? ): [Array2]
+serialize( names?:String ): [Array2]
+values( names:String, strict:Boolean ): Object|[Value]
 queryURL(): String
 isArray(): Boolean
 isNumeric(): Boolean

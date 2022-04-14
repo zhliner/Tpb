@@ -289,44 +289,16 @@ const _Gets = {
      * @param  {String} names 控件名序列
      * @return {Object} 名:值对对象
      */
-    valo( evo, names ) {
-        return $.controls( evo.data, names )
-            .reduce( (o, el) => (o[el.name] = $.val(el), o), {} );
+    valobj( evo, names ) {
+        return $.values( evo.data, names, null );
     },
 
-    __valo: 1,
-
-
-    /**
-     * 获取表单控件值。
-     * 目标：暂存区1项可选。
-     * 如果暂存区有值，需为表单元素，否则取当前绑定的表单元素。
-     * 多个名称返回目标控件值的序列，与名称一一对应。单个名称返回单个值。
-     * 如果一个名称未对应到控件，会取值为一个null。
-     * 注：
-     * 与tQuery.val行为相同，但此用控件名定位元素。
-     * @data: <form>
-     * @param  {String} names 控件名序列
-     * @param  {Boolean} strict 严格对应模式（null成员保留）
-     * @return {Value|[Value]|[[Value]]}
-     */
-    value( evo, names, strict ) {
-        let _vs = $.controls(
-                evo.data || evo.delegate,
-                names,
-                !strict
-            ).map( el => el && $.val(el) );
-
-        return _vs.length === 1 ? _vs[0] : _vs;
-    },
-
-    __value: -1,
+    __valobj: 1,
 
 
     /**
      * 获取表单控件选取状态。
-     * 目标：暂存区1项可选。
-     * 如果暂存区无值，取当前上下文表单元素（友好表单元素）。
+     * 目标：暂存区/栈顶1项。
      * 单个名称返回单值，否则返回一个值数组。
      * 注意名称应当有效（有name或id属性），否则无法取值。
      * 注意：
@@ -339,7 +311,7 @@ const _Gets = {
      */
     checked( evo, names, strict ) {
         let _vs = $.controls(
-                evo.data || evo.delegate,
+                evo.data,
                 names,
                 !strict
             ).map( el => el && (el.indeterminate ? null : el.checked) );
@@ -347,7 +319,7 @@ const _Gets = {
         return _vs.length === 1 ? _vs[0] : _vs;
     },
 
-    __checked: -1,
+    __checked: 1,
 
 
     /**
@@ -1823,7 +1795,6 @@ const _Gets = {
 //
 // 杂项工具。
 // 目标：暂存区/栈顶1项。
-// 目标作为方法的首个实参。多余实参无副作用。
 //===============================================
 [
     'table',        // ( cols, rows?, th0?, doc? ): $.Table
@@ -1834,6 +1805,7 @@ const _Gets = {
     'isXML',        // ( el:Element ): Boolean
     'controls',     // ( frm:Element, names ): [Element]
     'serialize',    // ( frm:Element, names ): [Array2]
+    'values',       // ( frm:Element, names, strict ): Object|[Value]
     'queryURL',     // ( target ): String
     'isArray',      // ( val ): Boolean
     'isNumeric',    // ( val ): Boolean
@@ -1849,7 +1821,8 @@ const _Gets = {
 ]
 .forEach(function( meth ) {
     /**
-     * @return {Value}
+     * 目标作为方法的首个实参。
+     * 多余实参无副作用。
      */
     _Gets[meth] = function( evo, ...rest ) {
         return $[meth]( evo.data, ...rest );
