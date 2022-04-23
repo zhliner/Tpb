@@ -37,7 +37,7 @@ const
     __reSpace = /\s+/,
 
     // 至少1个空白。
-    // 保留首个匹配字符和剩余部分记忆。
+    // 保留首个匹配字符和剩余部分记忆以便于用户使用。
     // 注：trims专用。
     __reSpace1n = /(\s)(\s*)/g,
 
@@ -826,7 +826,7 @@ const _Process = {
      * 检查对象内与目标值相等的属性条目，替换或移除。
      * 如果替换值未传递（undefined），表示移除该属性条目。
      * 不传递任何实参会移除值为undefined的条目。
-     * 支持多层次嵌套的对象数组。
+     * 支持数组及嵌套的子数组。
      * 注意：
      * 操作会影响传入的流程数据本身。
      * @data: Object|[Object]
@@ -1601,6 +1601,8 @@ const _Process = {
      * 将字符串内连续的空白替换为指定的字符序列，
      * 首尾空白只会在传递 rch 为空串时才有清除的效果。
      * 默认替换为空白匹配序列的首个空白。
+     * 用户：
+     * 连续多个空白中，首个空白可用 $1 引用，剩余空白可用 $2 引用。
      * @param  {String|Function} rch 空白替换符，可选
      * @return {String|[String]}
      */
@@ -1899,9 +1901,9 @@ const _Process = {
 // map、each方法操作的目标支持Object。
 //////////////////////////////////////////////////////////////////////////////
 [
-    'not',      // ( fltr?: String|Function )
+    'not',      // ( fltr?: String|Function|... )
     'has',      // ( slr?: String )
-    'filter',   // ( fltr?: String|Function )
+    'filter',   // ( fltr?: String|Function|... )
     'map',      // ( proc?: Function )
     'each',     // ( proc?: Function )
 ]

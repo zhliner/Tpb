@@ -1014,7 +1014,7 @@ const _Gets = {
      * @data: Templater 模板管理器
      * @param  {String} name 模板名/序列
      * @param  {Boolean} clone 是否克隆
-     * @param  {Boolean} bound 克隆包含绑定是事件处理器，可选
+     * @param  {Boolean} bound 克隆包含绑定的事件处理器，可选
      * @return {Element|null|[Element|null]}
      */
     node( evo, name, clone, bound ) {
