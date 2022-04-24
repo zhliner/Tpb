@@ -50,6 +50,12 @@ import { Templater, obtAttr } from "./tools/templater.js";
 // 调试工具
 //////////////////////////////////////////////////////////////////////////////
 
+import { tplRoot } from "./user.js";
+import { Loader } from "./tools/tloader.js";
+
+// 模板节点提取器。
+const XLoader = new Loader( tplRoot );
+
 
 if ( DEBUG ) {
 
@@ -80,11 +86,11 @@ function namedTpls( files, sort ) {
     files.forEach( f => _buf.set(f, null) );
 
     // 避免之前构建影响。
-    TLoader.clear();
+    XLoader.clear();
 
     Promise.all(
         files.map( f =>
-            TLoader.node( f )
+            XLoader.node( f )
             .then( frag => $.find('[tpl-name]', frag).map(el => $.attr(el, 'tpl-name')) )
             .then( ns => _buf.set(f, sort ? orderList(ns) : ns) )
         )
