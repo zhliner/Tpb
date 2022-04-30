@@ -349,10 +349,12 @@ const _Control = {
      * 压入特殊值undefined。
      * 目标：暂存区1项可选。
      * 特权：是，特殊操作。
-     * 如果目标有值，则为判断入栈逻辑：
+     * 如果目标有值：
      * - 真值入栈 undefined。
-     * - 假值入栈候选值 val。
-     * - 如果未传递val，条件假不会入栈值（返回的undefined被忽略）。
+     * - 假值入栈候选值 val（非 undefined）。
+     * 注意：
+     * 如果未传递val，目标假时并不会入栈 undefined（被简单忽略）。
+     *
      * 可用于向栈内填充无需实参的占位值。
      * @param  {Stack} stack 数据栈
      * @param  {Value} val 候补值，可选
