@@ -1298,7 +1298,6 @@ class Update {
         }
         // pass|end|debug
         // 无取栈数量要求，不自动取流程数据。
-        // 注：模板实参不在此列。
         if ( _f[UPDATEX] ) {
             return cell.build( this._args, _f, _f[ACCESS] );
         }
