@@ -1,6 +1,6 @@
-//! $ID: config.js 2021.12.25 Tpb.Config $
-// +++++++++++++++++++++++++++++++++++++++++
-//  Project: Tpb v0.4.1
+//! $ID: config.js 2022.05.12 Tpb.Config $
+// +++++++++++++++++++++++++++++++++++++++++++
+//  Project: Tpb v0.5.0
 //  E-Mail:  zhliner@gmail.com
 //  Copyright (c) 2021 铁皮工作室  MIT License
 //
@@ -21,6 +21,8 @@ import { Loader, TplLoader } from "./tools/tloader.js";
 
 const
     DEBUG = true,
+
+    Version = 'v0.5.0',
 
     // 本系模板管理器名称
     // 上级应用默认的模板系名称用一个空串表示。
@@ -102,6 +104,7 @@ const tplInit = tplr => TplsPool.set( TplrName, tplr ) && tplr;
 
 export {
     DEBUG,
+    Version,
     TplrName,
     evnidDlmt,
     tplMaps,

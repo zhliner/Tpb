@@ -1,8 +1,8 @@
-//! $ID: tpb.js 2019.08.19 Tpb.Base $
-// ++++++++++++++++++++++++++++++++++++
-//  Project: Tpb v0.4.0
+//! $ID: tpb.js 2022.05.12 Tpb.Base $
+// ++++++++++++++++++++++++++++++++++++++
+//  Project: Tpb v0.5.0
 //  E-Mail:  zhliner@gmail.com
-//  Copyright (c) 2021 铁皮工作室  MIT License
+//  Copyright (c) 2022 铁皮工作室  MIT License
 //
 //////////////////////////////////////////////////////////////////////////////
 //
@@ -38,7 +38,7 @@ import { On } from "./pbs.get.js";
 import { By } from "./pbs.by.js";
 import { To } from "./pbs.to.js";
 
-import $, { DEBUG, TLoader, tplInit, DataStore, TplsPool, TplrName } from "./config.js";
+import $, { DEBUG, TLoader, tplInit, DataStore, TplsPool, TplrName, Version as version } from "./config.js";
 import { hostSet, namedExtend, deepExtend, funcSets } from "./base.js";
 import { App } from "./app.js";
 import { Builder } from "./core.js";
@@ -348,4 +348,5 @@ export {
     obtBuilder,
 };
 
-export const Tpb = { init, build, templater };
+// 含版本信息。
+export const Tpb = { init, build, templater, version };
