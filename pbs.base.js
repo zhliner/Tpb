@@ -606,45 +606,32 @@ const _Control = {
 
 
     /**
-     * CASE分支比较。
-     * 目标：暂存区/栈顶1项。
-     * 目标与实参一一相等（===）比较，结果入栈。
-     * 需要在$switch指令之前先执行。
-     * @param  {...Value} vals 实参序列
+     * 比较按位取条目。
+     * 目标：暂存区/栈顶2项。
+     * - 目标[0] 为候选取值序列（按位置存值的数组）。
+     * - 目标[1] 为CASE对比值，将与实参序列成员作相等（===）比较。
+     * 行为：
+     * 实参序列成员逐一与目标[1]对比，相等即取其位置，提取候选值序列相同位置的值返回。
+     * 若最终没有匹配，取值位置即为实参数量（默认值）。
+     * 注意：
+     * - 候选值序列长度通常与此处的实参序列长度相同，但这不是必须的。
+     * - 如果想要在没有匹配时返回一个默认值，可以让候选值序列长度多一位，此位即为默认值。
+     * - 若无任何匹配且无候选默认值，返回的undefined会被自动忽略。
+     * @data: [[Value], Value]
+     * @param  {...Value} args 实参序列
      * @return {[Boolean]} 结果集
      */
-    $case( evo, ...vals ) {
-        return vals.map( v => v === evo.data );
-    },
+    $case( evo, ...args ) {
+        let [vs, v] = evo.data,
+            i = 0;
 
-    __$case: 1,
-
-
-    /**
-     * SWITCH分支判断。
-     * 目标：暂存区/栈顶1项。
-     * 测试目标集内某一成员是否为真，是则取相同下标的vals成员返回。
-     * 目标通常是$case执行的结果，但也可以是任意值集。
-     * 注：
-     * 仅取首个真值对应的实参值入栈。
-     * 实参序列通常与目标集长度相同，若末尾多出一个，视为无匹配时的默认值。
-     * 无任何匹配时，返回null值。
-     * @data: [Boolean]
-     * @param  {...Value} vals 入栈值候选
-     * @return {Value|null}
-     */
-    $switch( evo, ...vals ) {
-        let i, b;
-
-        for ( [i, b] of evo.data.entries() ) {
-            if ( b ) return vals[ i ];
+        for ( ; i < args.length; i++ ) {
+            if ( args[i] === v ) return vs[i];
         }
-        let _v = vals[ i+1 ];
-
-        return _v === undefined ? null : _v;
+        return vs[i];
     },
 
-    __$switch: 1,
+    __$case: 2,
 
 
     /**

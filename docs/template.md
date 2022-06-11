@@ -1,6 +1,6 @@
 # 模板
 
-模板是由HTML源码、OBT事件定义（`on/by/to`）、渲染配置（`tpb-xxx`）以及模板节点规划（`tpl-name|node`）构成的HTML文件。
+模板是由HTML源码、OBT事件定义（`on/by/to`）、渲染配置（`tpb-xxx`）以及模板节点规划（`tpl-name|node|source`）构成的HTML文件。
 
 **模板的复用** 限于源码文本层面的复用，由 `tpl-name` 命名模板节点，由 `tpl-node` 引入克隆的节点副本。
 

@@ -312,11 +312,8 @@ local( name: String|null, its?: Value|String|null): void|Value
 $if( val, elseval?: Value ): Value
 // 条件判断。
 
-$case( ...vals: String ): [Boolean]
-// 分支比较。
-
-$switch( ...vals: String ): Value
-// 分支判断赋值。
+$case( ...args: String ): Value
+// 比较取条目。
 
 or( val, strict ): Value
 // 假值替换

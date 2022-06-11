@@ -229,7 +229,8 @@ const _Update = {
 
     /**
      * 集合包裹。
-     * 注：tos视为一个整体作为待插入的内容。
+     * tos视为一个整体作为待插入的内容。
+     * 如果包裹容器为元素且为克隆方式，支持容器内事件克隆。
      * @param  {Element|Collector} to 检索目标
      * @param  {Element|String} box 包裹容器
      * @param  {Boolean} clone 包裹容器是否克隆（深层）
