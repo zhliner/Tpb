@@ -125,6 +125,7 @@ class Templater {
         let _tpl = this._tpls.get( name );
 
         if ( !_tpl ) {
+            window.console.warn( `[${name}] template not found.` );
             return null;
         }
         return clone ? this._clone( _tpl, bound ) : _tpl;
