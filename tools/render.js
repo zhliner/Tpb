@@ -20,7 +20,20 @@
 //      for                 子元素循环
 //      _[attr]             属性赋值（系列）
 //  }
-//  注：原地更新支持任意渲染语法，Each列表甚至可以从中间开始。
+//  另：
+//  tpb-root标记渲染根节点（即便是模板根，如果需要从它开始渲染，也需要标记）。
+//
+//
+//  结构：
+//  Grammars:{WeakMap}      源模板文法存储（总参考源）
+//  __rootMap:{WeakMap}     渲染根映射（渲染目标 => 源模板节点）
+//  __tmpGrams:{Map}        渲染时即时克隆元素的文法存储，临时空间（用完清空）
+//
+//  渲染：
+//  1. 找到渲染目标（tpb-root）的源模板节点（__rootMap）。
+//  2. 克隆源模板节点，包括其上的事件处理器和渲染文法，后者存储在__Grammars中。
+//  3. 对克隆的新元素执行渲染。
+//  4. 如果可以（目标非源模板引用），新元素替换渲染目标。
 //
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -39,19 +52,18 @@ const
     // 这一特性名会保留在DOM元素上。
     HasRender = '_',
 
-    // 元素文法存储。
-    // 包含原始模板中和页面中采用渲染处理的元素。
-    // Map {
-    //      [word]: [...]    // [文法词]: [参数序列]
-    // }
-    // 参数序列：
-    // - handle: Function 表达式执行器。
-    // - ...: Value 文法特定的额外参数序列。
-    // 注：
-    // - 参数序列应该可以直接解构传入文法操作函数。
-    // - 存储器采用Map结构，隐含了文法的处理顺序。
     //
-    // { Element: Map }
+    // 元素文法存储。
+    // Element: Map{
+    //      word: [...args] // 文法词: [参数序列]
+    // }
+    // 其中值采用Map结构，可附带文法的处理顺序。
+    // args：
+    // - [0]: handle:{Function} 表达式执行函数封装。
+    // - ...: {Value} 文法特定的额外参数序列。
+    // 附：
+    // 调用处理：handle( ...args[1:] )
+    //
     Grammars = new WeakMap();
 
 
@@ -68,7 +80,8 @@ const
     __Switch    = 'tpb-switch',     // switch （子元素分支）
     __Case      = 'tpb-case',       // switch/case
     __Last      = 'tpb-last',       // switch/last（含 default）
-    __For       = 'tpb-for';        // 子元素循环
+    __For       = 'tpb-for',        // 子元素循环
+    __Root      = 'tpb-root';       // 渲染根元素标记
 
 
 const
@@ -81,64 +94,59 @@ const
     // 渲染元素选择器。
     __slrRender = `[${HasRender}]`,
 
+    // 渲染根选择器。
+    __slrRoot = `[${__Root}]`,
+
     // 循环内临时变量名
     __loopIndex = 'INDEX',  // 当前条目下标（从0开始）
     __loopSize  = 'SIZE',   // 循环集大小
 
     // 当前域数据存储键。
-    // 用于循环中或With在元素上存储当前域数据。
-    // 注：调用者取当前域先从元素上检索。
-    __scopeData = Symbol('scope-data'),
+    // 在元素上存储当区域数据，以便于后期引用。
+    // 适用：tpb-with, tpb-each, tpb-for
+    __scopeData = Symbol( 'scope-data' ),
 
-    // Each克隆元素序位记忆。
-    // 可用于从克隆元素开始更新。
-    __eachIndex = Symbol('each-index'),
-
-    // 比较状态存储。
-    // 来源：If/Else, Case/Last。
-    __compState = Symbol('compare-result'),
+    // Each渲染就绪标记。
+    // 避免重复渲染（无限循环）。
+    __eachDone = Symbol( 'each-done' ),
 
     // switch标的值存储键。
-    __switchValue = Symbol('switch-value'),
-
-    // case状态存储。
-    // 存储在父元素（switch）上。
-    __casePass  = Symbol('case-pase'),
-
-    // switch简单隐藏前原值存储。
-    // 适用当last文法判断为假时的增强行为。
-    __switchDisplay = Symbol('switch-display'),
-
-    // For子元素引用保留。
-    // 避免空数组渲染清空子元素后渲染缺乏目标。
-    __forSubs = Symbol('for-children'),
+    // 供 Case/Last 分支对比。
+    __switchCase = Symbol( 'switch-case' ),
 
     // 过滤切分器。
     // - 识别字符串语法（字符串内的|为普通字符）。
-    // - 排除小括号封装：逻辑或（||）需包含在一对小括号内。
-    __pipeSplit = new Spliter( __chrPipe, new UmpCaller(), new UmpString() );
+    // - 排除小括号封装：因为逻辑或（||）需包含在一对小括号内。
+    // 注记：
+    // 为了避免表达式中的逻辑或（||）与过滤标识符混淆，前者需要包含在一对小括号内。
+    // 这也是上面排除小括号封装的原因。
+    __pipeSplit = new Spliter( __chrPipe, new UmpCaller(), new UmpString() ),
+
+    // 即时渲染文法存储区。
+    // { Element: Map }
+    __tmpGrams = new Map(),
+
+    // 渲染根模板映射。
+    // 即tpb-root标记的元素（副本）对源模板的映射。
+    // {new:Element => src:Element}
+    __rootMap = new WeakMap();
 
 
 
 //
 // 渲染配置解析。
-// 构造 Map{文法: 参数序列} 的存储（Grammars）。
-//
+// 构造文法集（Map{文法: 参数序列}）的存储。
 // 解析相对独立，无DOM树依赖。
-// - Each语法向上检查父元素（For标记）。
-// - For语法向下依赖直接子元素（统计配置）。
-//
-// 注：
-// 在tpl-node/source上设置渲染语法没有意义，
-// 因此渲染解析是模板独立的（不牵涉子模版）。
+// 注记：
+// 在tpl-node/source上设置渲染语法没有意义，因此不牵涉子模版。
 //
 const Parser = {
     //
     // 文法解析方法映射：[
     //      [ 属性名, 解析方法名 ]
     // ]
-    // 同一组文法不应在单一元素上同时存在（如if/else同时定义）。
-    // 下面的列表隐含了语法处理的优先级。
+    // 逻辑互斥的文法不应在同一元素上同时定义（如 tpb-if 和 tpb-else）。
+    // 注意：本列表隐含了文法处理优先级。
     //
     Method: [
         [__Each,    '$each'],
@@ -150,7 +158,7 @@ const Parser = {
         [__Last,    '$last'],
         [__Switch,  '$switch'],
         [__For,     '$for'],
-        // Assign at last.
+        // Assign at last...
     ],
 
 
@@ -164,8 +172,7 @@ const Parser = {
 
         for ( const [an, fn] of this.Method ) {
             if ( el.hasAttribute(an) ) {
-                // $for/$each 需要第三个实参
-                this[fn]( _map, el.getAttribute(an), el );
+                this[fn]( _map, el.getAttribute(an) );
                 el.removeAttribute(an);
             }
         }
@@ -176,44 +183,30 @@ const Parser = {
 
     /**
      * Each文法解析。
-     * Each: [handle, prev-size]
-     * 需检查标记父元素可能有的For文法配置。
-     * 注：此语法向上依赖。
+     * Each: [handle]
      * @param  {Map} map 存储集
      * @param  {String} val 属性值
-     * @param  {Element} el 当前元素
      * @return {Map} map
      */
-    $each( map, val, el ) {
-        // 父元素For检查。
-        eachFor( el.parentElement );
-
+    $each( map, val ) {
         return map.set(
             'Each',
-            [ Expr.loop(val), 1 ]
+            [ Expr.loop(val) ]
         );
     },
 
 
     /**
      * For文法解析。
-     * For: [handle, size, each]
-     * each为子元素Each文法标记，可避免冗余清理，
-     * 这在子元素的$each解析中更新（子元素后处理）。
-     * 注：此语法向下依赖（直接子元素）。
+     * For: [handle]
      * @param  {Map} map 存储集
      * @param  {String} val 属性值
-     * @param  {Element} el 当前元素
      * @return {Map} map
      */
-    $for( map, val, el ) {
-        // 引用存储，
-        // 预防子元素被清空失去渲染目标。
-        forSubs( el, true );
-
+    $for( map, val ) {
         return map.set(
             'For',
-            [ Expr.loop(val), el.childElementCount, false ]
+            [ Expr.loop(val) ]
         );
     },
 
@@ -265,8 +258,8 @@ const Parser = {
 
     /**
      * Else文法解析。
-     * 含 elseif 逻辑。
-     * Else: [handle|pass]
+     * 如果包含条件测试，则为 elseif 逻辑。
+     * Else: [handle|pass, elseif]
      * @param  {Map} map 存储集
      * @param  {String} val 属性值
      * @return {Map} map
@@ -274,7 +267,7 @@ const Parser = {
     $else( map, val ) {
         return map.set(
             'Else',
-            [ val ? Expr.value(val) : Expr.pass() ]
+            [ val ? Expr.value(val) : Expr.pass(), !!val ]
         );
     },
 
@@ -326,7 +319,7 @@ const Parser = {
 
     /**
      * 属性赋值文法解析。
-     * 需要渲染的属性名前置一个下划线。
+     * 需要渲染的特性名前置一个下划线。
      * 注：这是最后一个解析的文法。
      * Assign: [[name], [handle]]
      * @param  {Map} map 存储集
@@ -334,10 +327,12 @@ const Parser = {
      * @return {Map} map
      */
     assign( map, el ) {
-        let _ats = [], _fns = [];
+        let _ats = [],
+            _fns = [];
 
         for ( let at of Array.from(el.attributes) ) {
             let _n = at.name;
+
             if ( _n[0] == __chrAttr ) {
                 _ats.push( _n.substring(1) );
                 _fns.push( Expr.assign(at.value) );
@@ -345,7 +340,7 @@ const Parser = {
                 el.removeAttribute(_n);
             }
         }
-        return _ats.length > 0 ? map.set('Assign', [_ats, _fns]) : map;
+        return _ats.length ? map.set('Assign', [_ats, _fns]) : map;
     },
 
 };
@@ -353,272 +348,202 @@ const Parser = {
 
 
 //
-// 渲染文法执行。
+// 渲染文法执行集。
 // 按文法固有的逻辑更新目标元素（集）。
-// 元素上存储的当前域数据（[__scopeData]）拥有最高的优先级。
-// @data {Object} 应用前的当前域数据
+// 注记：
+// 元素上存储的当前域数据[__scopeData]会被优先取用。
+// @param  {Object} data  当前域数据
+// @param  {Object} gdata 根数据源对象
 // @return {void}
 //
 const Grammar = {
     /**
-     * 自迭代循环。
-     * 用数据集更新原始集，可从任意成员位置开始（向后更新）。
-     * - 如果原始集小于需要的集合大小，会自动扩展。
-     * - 如果原始集大于需要的集合大小，会截断至新集合大小。
-     * - 需要检查/处理父元素中的For语法影响（如果有）。
-     * 文法：{ Each: [handle, size] }
-     * 会存储当前域数据到每一个元素的 [__scopeData] 属性上。
-     * @param {Element} el 起始元素
+     * 当前元素自循环。
+     * - 提取集合各成员，设置当前域。
+     * - 结果元素上做标记，避免重复渲染（无限循环）。
+     * 文法实参：[handle]
+     * @param {Element} el 目标元素
      * @param {Function} handle 表达式取值函数
-     * @param {Number} size 原始集（前次）大小
      * @param {Object} data 当前域数据
+     * @param {Object} gdata 根数据源对象
      */
-    Each( el, handle, size, data ) {
-        let _idx = el[__eachIndex] || 0,
-            _arr = handle( data );
-
-        this._alignEach( eachList(el, size-_idx), _arr.length, _idx+1 )
-        .forEach(
-            // 设置当前域对象。
-            (el, i) => el[__scopeData] = loopCell( _arr[i], i, data )
+    Each( el, handle, data, gdata ) {
+        el[__eachDone] || $.replace(
+            el,
+            eachList( el, handle(data, gdata), data )
         );
-        // 更新计数。
-        Grammars.get(el).get('Each')[1] = _arr.length + _idx;
     },
 
 
     /**
-     * 子元素循环。
-     * 文法：{ For: [handle, size, each] }
+     * 子元素集循环。
      * 当前域数据存储在迭代克隆的每个子元素上。
-     * 注：被隐藏的元素不再渲染。
+     * 文法实参：[handle]
      * @param {Element} el For容器元素
      * @param {Function} handle 表达式取值函数
-     * @param {Number} size 单次循环子元素数量
-     * @param {Boolean} each 子元素是否含Each文法
      * @param {Object} data 当前域数据
+     * @param {Object} gdata 根数据源对象
      */
-    For( el, handle, size, each, data ) {
-        if ( hidden(el) ) {
-            return;
-        }
-        let _arr = handle( data );
-
-        if ( el.childElementCount === 0 ) {
-            $.append( el, forSubs(el) );
-        }
-        // 需移除子元素中多余的Each。
-        this._alignFor( cleanEach(el, each), size, _arr.length )
-        .forEach(
-            (el, n) => {
-                let _i = parseInt( n / size );
-                // 当前域存储。
-                el[__scopeData] = loopCell( _arr[_i], _i, data );
-            }
+    For( el, handle, data, gdata ) {
+        $.append(
+            el,
+            forList( $.empty(el), handle(data, gdata), data ).flat()
         );
     },
 
 
     /**
      * 创建新的当前域。
-     * 文法：{ With: [handle] }
      * 新的当前域数据存储在元素的 [__scopeData] 属性上。
+     * 文法实参：[handle]
      * @param {Element} el 当前元素
      * @param {Function} handle 表达式取值函数
      * @param {Object} data 当前域数据
+     * @param {Object} gdata 根数据源对象
      */
-    With( el, handle, data ) {
-        let _sub = handle( data );
+    With( el, handle, data, gdata ) {
+        let _sub = handle( data, gdata );
 
-        if ( !_sub ) _sub = Object(_sub);
-        _sub.$ = data;
-
-        // 友好：原型继承
-        if ( $.type(_sub) == 'Object' && $.type(data) == 'Object' ) {
-            $.proto( _sub, data );
+        if ( typeof _sub !== 'object' ) {
+            _sub = Object( _sub );
         }
+        _sub.$ = data;  // 父域设置
+
         el[ __scopeData ] = _sub;
     },
 
 
     /**
      * 新建变量。
-     * 文法：{ Var: [handle] }
-     * 表达式应该是在当前域对象上添加新的变量，简单执行即可。
+     * 表达式应该是在当前域对象上添加新的变量，
+     * 简单执行即可。
+     * 文法实参：[handle]
      * @param {Element} el 当前元素
      * @param {Function} handle 表达式取值函数
      * @param {Object} data 当前域数据
+     * @param {Object} gdata 根数据源对象
      */
-    Var( el, handle, data ) {
-        handle( data );
+    Var( el, handle, data, gdata ) {
+        handle( data, gdata );
     },
 
 
     /**
      * If 逻辑。
-     * 文法：{ If: [handle] }
-     * 注：仅针对元素自身显示或隐藏（<template>）。
+     * 结果为假时，当前元素直接从DOM中移除。
+     * 结果为真时，向后检索Else/Elseif，移除它们。
+     * 文法实参：[handle]
      * @param {Element} el 当前元素
      * @param {Function} handle 表达式取值函数
      * @param {Object} data 当前域数据
+     * @param {Object} gdata 根数据源对象
      */
-    If( el, handle, data ) {
-        return handle(data) ? showElem(el) : hideElem(el);
+    If( el, handle, data, gdata ) {
+        if ( handle(data, gdata) ) {
+            detachElse( el );
+        } else {
+            $.remove( el );
+        }
     },
 
 
     /**
-     * Else 逻辑。
-     * 文法：{ Else: [handle] }
-     * 向前检索If/Elseif元素，判断当前元素显示或隐藏。
+     * Else/Elseif 逻辑。
+     * 如果为 Elseif 逻辑，向后检索处理同 If 文法。
+     * 如果是单纯的 Else，则原地保持即可（无行为）。
+     * 文法实参：[handle, elseif]
      * @param {Element} el 当前元素
      * @param {Function} handle 表达式函数
+     * @param {Boolean} cond 是否包含条件判断（elseif）
      * @param {Object} data 当前域数据
+     * @param {Object} gdata 根数据源对象
      */
-    Else( el, handle, data ) {
-        return elseShow(el) ? this.If(el, handle, data) : hideElem(el);
+    Else( el, handle, cond, data, gdata ) {
+        if ( handle(data, gdata) ) {
+            return cond && detachElse( el );
+        }
+        $.remove( el ); // 必然为 elseif
     },
 
 
     /**
-     * 分支选择。
-     * 文法：{ Switch: [handle] }
+     * 分支选择创建。
      * 子元素分支条件判断，决定显示或隐藏。
-     * 实现：在当前元素上存储标的值。
-     * 注：被隐藏的元素不再渲染。
+     * 如果全部分支判断都为假，会移除switch元素本身。
+     * 文法实参：[handle]
+     * 实现：
+     * 在当前元素上存储标的值即可，其它逻辑由子元素 Case/Last 完成。
      * @param {Element} el 当前元素
      * @param {Function} handle 表达式取值函数
      * @param {Object} data 当前域数据
+     * @param {Object} gdata 根数据源对象
      */
-    Switch( el, handle, data ) {
-        if ( !hidden(el) ) {
-            el[__switchValue] = handle( data );
-            el.style.display = originStyle( el );
-        }
+    Switch( el, handle, data, gdata ) {
+        el[__switchCase] = handle( data, gdata );
     },
 
 
     /**
      * 分支测试执行。
-     * 文法：{ Case: [handle] }
-     * 与Switch标的值比较（===），真为显示假为隐藏。
-     * - 真：向后检索其它Case/Last文法元素，标记隐藏。
-     * - 假：隐藏当前元素，向后检索其它Case/Last隐藏标记设置为假。
+     * 与 Switch 标的值比较（===），结果为真即保留，否则移除。
+     * 当某一 Case 为真时，移除后续其它 Case/List 条目。
+     * 文法实参：[handle]
+     * 注意：
+     * Switch/Case,Last 逻辑仅限于父子元素两个层级。
      * @param {Element} el 当前元素
      * @param {Function} handle 表达式取值函数
      * @param {Object} data 当前域数据
+     * @param {Object} gdata 根数据源对象
      */
-    Case( el, handle, data ) {
+    Case( el, handle, data, gdata ) {
         let _box = el.parentElement;
 
-        if ( caseShow(_box) && _box[__switchValue] === handle(data) ) {
-            showElem( el );
-            _box[__casePass] = true;
-        } else {
-            hideElem( el );
-            _box[__casePass] = false;
+        if ( _box[__switchCase] === handle(data, gdata) ) {
+            return detachCase( el );
         }
+        $.remove( el );
     },
 
 
     /**
-     * 默认分支。
-     * 文法：{ Last: [handle|null] }
-     * 如果文法配置非null，最后Case逻辑，不匹配时隐藏父Switch。
-     * 否则为Default逻辑，无条件匹配。
+     * 尾分支默认或测试。
+     * 如果包含条件表达式，则类似 Case，否则为默认分支。
+     * 如果尾分支都不匹配，会移除 Switch 树本身（即父元素）。
+     * 文法实参：[handle|null]
+     * 注记：
+     * 如果需要全部分支都不匹配时，依然保留其它不含渲染文法的兄弟元素，
+     * 可以仅使用 Case 文法。
+     * Last 应该是最后一个分支，否则后面的 Case 会被视为新分支，
+     * 即可能同时有两个分支被保留（Last 和 新的 Case）。
      * @param {Element} el 当前元素
      * @param {Function} handle 表达式函数
      * @param {Object} data 当前域数据
+     * @param {Object} gdata 根数据源对象
      */
-    Last( el, handle, data ) {
+    Last( el, handle, data, gdata ) {
         let _box = el.parentElement;
 
-        if ( !handle ) {
-            // Default: 不再设置[__casePass]。
-            return caseShow(_box) ? showElem(el) : hideElem(el);
+        if ( handle && _box[__switchCase] !== handle(data, gdata) ) {
+            $.remove( _box );
         }
-        this.Case( el, handle, data );
-
-        // 依然未匹配。
-        // 注记：后期修改会影响下一次渲染，因此用设置style。
-        if ( caseShow(_box) ) _box.style.display = 'none';
     },
 
 
     /**
      * 特性赋值。
-     * 文法：{ Assign: [[name], [handle]] }
-     * 支持两个特殊属性名：text, html。
-     * 多个属性名之间空格分隔，与 handles 成员一一对应。
-     * 注：被隐藏的元素不再渲染。
+     * 特性名集和处理器集成员一一对应。
+     * 支持两个特殊特性名：text, html。
+     * 文法实参：[[name], [handle]]
      * @param {[String]} names 属性名集
      * @param {[Function]} handles 处理器集
      * @param {Object} data 当前域数据
+     * @param {Object} gdata 根数据源对象
      */
-    Assign( el, names, handles, data ) {
-        if ( hidden(el) ) {
-            return;
-        }
+    Assign( el, names, handles, data, gdata ) {
         names.forEach(
             (name, i) =>
-            $.attr( el, name || 'text', handles[i](data) )
+            $.attr( el, name || 'text', handles[i](data, gdata) )
         );
-    },
-
-
-    //-- 私有辅助 -----------------------------------------------------------------
-
-
-    /**
-     * Each元素集数量适配处理。
-     * 如果目标大小超过原始集，新的元素插入到末尾。
-     * @param  {[Element]} els 原始集
-     * @param  {Number} count 循环迭代的目标次数
-     * @param  {Number} beg 起始下标
-     * @return {[Element]} 大小适合的元素集
-     */
-    _alignEach( els, count, beg ) {
-        let _sz = count - els.length;
-
-        if ( _sz < 0 ) {
-            // 移除超出部分。
-            els.splice(_sz).forEach( e => $.remove(e) );
-        }
-        else if ( _sz > 0 ) {
-            // 补齐不足部分。
-            let _ref = els[els.length-1];
-            els.push(
-                ...$.after( _ref, eachClone(_ref, _sz, beg) )
-            );
-        }
-        return els;
-    },
-
-
-    /**
-     * For子元素数量适配处理。
-     * 需要包含子元素循环才有意义。
-     * @param  {[Element]} els For子元素集（全部）
-     * @param  {Number} size 单次循环子元素数量
-     * @param  {Number} count 循环迭代的目标次数
-     * @return {[Element]} 数量适合的子元素集
-     */
-    _alignFor( els, size, count ) {
-        let _loop = parseInt(els.length / size),
-            _dist = count - _loop;
-
-        if ( _dist < 0 ) {
-            // 移除超出部分。
-            els.splice(_dist * size).forEach( e => $.remove(e) );
-        }
-        else if ( els.length > 0 && _dist > 0 ) {
-            // 补齐不足部分。
-            let _new = forClone( els.slice(-size), _dist );
-            els.push(
-                ...$.after( els[els.length-1], _new )
-            );
-        }
-        return els;
     },
 
 };
@@ -629,6 +554,9 @@ const Grammar = {
 // 表达式处理构造。
 // 返回一个目标渲染类型的表达式执行函数。
 // 注：表达式无return关键词。
+// 形参：
+// [0]: $   当前域数据对象。
+// [1]: $$  全局域根数据对象。
 // @param  {String} expr 表达式串
 // @return {Function|null}
 //
@@ -636,24 +564,25 @@ const Expr = {
     /**
      * 取值表达式。
      * 适用：tpb-with|switch|var|if/else|case,
-     * @return function(data): Value
+     * @return function(data, gdata): Value
      */
     value( expr ) {
-        return new Function( '$', `return ${expr};` );
+        return new Function( '$', '$$', `return ${expr};` );
     },
 
 
     /**
      * 循环表达式。
-     * 空值返回传入的数据本身。
-     * 适用：tpb-each, tpb-for.
-     * @return function(data): Array
+     * 适用：tpb-each, tpb-for
+     * @return function(data, gdata): Array
      */
     loop( expr ) {
         if ( !expr ) {
+            // 空值返回当前域数据自身。
+            // (data, gdata) => data
             return v => v;
         }
-        return new Function( '$', `return ${expr};` );
+        return new Function( '$', '$$', `return ${expr};` );
     },
 
 
@@ -671,20 +600,20 @@ const Expr = {
      * 属性赋值。
      * 支持可能有的过滤器序列，如：...|a()|b()。
      * 适用：_[name].
-     * 注：初始取值部分支持命名比较操作词。
-     * @return function(data): Value
+     * @param  {String} expr 赋值表达式
+     * @return {Function} function(data, gdata): Value
      */
     assign( expr ) {
         let _ss = [...__pipeSplit.split(expr)],
-            _fn = new Function( '$', `return ${_ss.shift()};` );
+            _fn = new Function( '$', '$$', `return ${_ss.shift()};` );
 
         if ( _ss.length == 0 ) {
             return _fn;
         }
         // 包含过滤器。
-        let _fxs = _ss.map( filterHandle );
+        let _f2s = _ss.map( filterHandle );
 
-        return data => _fxs.reduce( (d, fx) => fx[0](d, ...fx[1](data)), _fn(data) );
+        return (data, gdata) => _f2s.reduce( (d, f2) => f2[0](d, ...f2[1](data, gdata)), _fn(data, gdata) );
     },
 
 };
@@ -697,191 +626,157 @@ const Expr = {
 
 
 /**
- * 提取赋值过滤器句柄。
- * [
- *      func:Function,
- *      args:[Value]|''
- * ]
- * @param  {String} call 调用表达式
- * @return {Object} 过滤器对象
+ * 构造赋值过滤器对。
+ * [0]: 过滤器函数。
+ * [1]: 实参处理器（模板中小括号内的表达式）。
+ * @param  {String} expr 调用表达式
+ * @return {[Function, Function]} 过滤器&实参处理器对
  */
-function filterHandle( call ) {
-    let _fn2 = Util.funcArgs( call.trim() );
+function filterHandle( expr ) {
+    let _fn2 = Util.funcArgs( expr.trim() );
 
     return [
         Filter[ _fn2.name ],
-        new Function( '$', `return [${_fn2.args}]` )
+        new Function( '$', '$$', `return [${_fn2.args}]` )
     ];
 }
 
 
 /**
- * 文法元素集检索。
- * 包含<template>内的子元素匹配。
- * 适用于元素被隐藏（template化）后的文法克隆。
- * 注：el必然存在文法。
- * @param  {Element|DocumentFragment}} el 上下文对象
- * @param  {String} slr 选择器
- * @return {[Element]}
+ * 节点树文法克隆。
+ * to应当是src的克隆（相同DOM结构）。
+ * 应当在模板解析完成之后才使用。
+ * 注记：
+ * 不会处理<template>元素内的渲染语法。
+ * 用途：
+ * - 模板内部的克隆逻辑（tpl-node）。
+ * - 渲染中创建新元素时的即时克隆。
+ * @param  {Element} src 源元素
+ * @param  {Element} to  目标元素
+ * @param  {WeakMap|Map} srcbuf 文法取值区
+ * @param  {WeakMap|Map} tobuf  文法存储区
+ * @return {Element} to
  */
-function gramElements( el, slr ) {
-    let _els = [el];
+function cloneGrammar( src, to, srcbuf, tobuf ) {
+    let _ss = $.find( __slrRender, src, true );
 
-    if ( el.nodeName === 'TEMPLATE' ) {
-        el = el.content;
-    }
-    return _els.concat( $.find(slr, el) );
+    $.find( __slrRender, to, true )
+    .forEach(
+        (el, i) => tobuf.set( el, srcbuf.get(_ss[i]) )
+    )
+    return to;
 }
 
 
 /**
- * 节点树文法克隆&存储。
- * to应当是src的克隆（相同DOM结构）。
- * @param  {Element} src 源元素
- * @param  {Element} to 目标元素
+ * 检查并创建渲染根映射。
+ * 如果el有值，应当是tpl的克隆版（DOM结构相同）。
+ * 目标节点也可能就是模板节点自身，这在模板初始解析时有用。
+ * 模板节点也可能是一个克隆副本而不是初始源模板。
+ * 注记：
+ * 因为模板节点可被用户直接引用来渲染，所以模板也需要建立映射（自己映射到自己）。
+ * 这样就可以方便地找到源模板（在同一集合内）。
+ * @param  {Element} tpl 模板节点树
+ * @param  {Element} to  目标节点树，可选
  * @return {Element} to
  */
-function cloneGrammar( src, to ) {
-    cloneGrammars(
-        gramElements( src, __slrRender ),
-        gramElements( to, __slrRender )
+function rootMap( tpl, to = tpl ) {
+    let _src = $.find( __slrRoot, tpl, true );
+
+    $.find( __slrRoot, to, true )
+    .forEach(
+        // .get() 尝试追溯源模板
+        (el, i) => __rootMap.set( el, __rootMap.get(_src[i]) || _src[i] )
     );
     return to;
 }
 
 
 /**
- * 批量克隆文法配置存储。
- * 注：to和src是两个大小一致的集合。
- * @param  {[Element]} srcs 源节点集
- * @param  {[Element]} tos 新节点集
- * @return {void}
+ * 创建迭代新元素。
+ * 如果存在根映射，则新元素也需要添加映射。
+ * 同时也需要克隆自身和内部子元素可能有的渲染语法。
+ * @param  {Element} el 渲染目标
+ * @return {Element} 新元素
  */
-function cloneGrammars( srcs, tos ) {
-    srcs
-    .forEach( (el, i) =>
-        Grammars.set( tos[i], Grammars.get(el) )
+function loopOne( el ) {
+    let _new = rootMap(
+        el,
+        $.clone( el, true, true, true )
     );
+    return cloneGrammar( el, _new, __tmpGrams, __tmpGrams );
 }
 
 
 /**
- * 获取Each元素清单。
- * @param  {Element} el 起点元素
- * @param  {Number} size 元素数量
+ * 创建Each元素集。
+ * @param  {Element} el   渲染目标
+ * @param  {[Value]} vals 迭代值数组
+ * @param  {Object} data  当前域数据（循环前）
  * @return {[Element]}
  */
-function eachList( el, size ) {
-    let _buf = [];
-
-    while ( --size >= 0 && el ) {
-        _buf.push( el );
-        el = el.nextElementSibling;
-    }
-    return _buf;
-}
-
-
-/**
- * 指定数量的元素克隆。
- * 会存储新元素的渲染文法配置。
- * 用于Each中不足部分的批量克隆。
- * @param  {Element} ref 参考元素（克隆源）
- * @param  {Number} size 克隆的数量
- * @param  {Number} beg 新下标起始值
- * @return {[Element]} 新元素集
- */
-function eachClone( ref, size, beg ) {
+function eachList( el, vals, data ) {
     let _els = [];
 
-    for (let i=0; i<size; i++) {
-        let _new = $.clone(ref, true, true, true);
+    for ( const [i, v] of vals.entries() ) {
+        let _new = loopOne( el );
 
-        _new[__eachIndex] = beg + i;
-        _els.push( cloneGrammar(ref, _new) );
+        _new[__eachDone] = true;
+        // 设置当前域。
+        _new[__scopeData] = loopCell( v, i, data );
+
+        _els.push( _new );
     }
     return _els;
 }
 
 
 /**
- * 元素集克隆。
- * 存在渲染配置的元素会进行文法克隆存储。
- * 注：用于For循环的子元素单次迭代。
- * @param  {[Element]} els 子元素集
- * @return {[Element]} 克隆的新元素集
+ * 设置元素（集）当前域。
+ * 集合成员设置相同的域数据。
+ * 适用：For子元素集单次迭代。
+ * @param {[Node]} nodes 目标节点集
+ * @param {Number} i     循环当前下标
+ * @param {Value} v      循环当前值
+ * @param {Object} sup   父域对象
+ * @return [Element]
  */
-function cloneList( els ) {
-    let _new = els.map(
-        el => $.clone(el, true, true, true)
+function scopeElem( nodes, i, v, sup ) {
+    nodes.forEach(
+        nd => nd.nodeType === 1 && ( nd[__scopeData] = loopCell(v, i, sup) )
     );
-    _new.forEach(
-        (e, i) => cloneGrammar( els[i], e )
+    return nodes;
+}
+
+
+/**
+ * 克隆节点集。
+ * 包含文本节点，简单克隆即可。
+ * 如果是元素，则同时克隆渲染文法和渲染根映射。
+ * @param  {[Node]} nodes 节点集
+ * @return {[Node]} 新的节点集
+ */
+function cloneList( nodes ) {
+    return nodes.map(
+        nd => nd.nodeType === 1 ? loopOne( nd ) : nd.cloneNode( true )
     );
-    return _new;
 }
 
 
 /**
- * Each父元素的For文法检查/标记。
- * @param {Element} box 父元素
+ * 创建For子节点集（二维）
+ * @param  {[Node]} subs  子节点集
+ * @param  {[Value]} vals 迭代值数组
+ * @param  {Object} data  当前域数据（循环前）
+ * @return {[[Node]]} 子节点集组
  */
-function eachFor( box ) {
-    let _grm = Grammars.get(box),
-        _for = _grm && _grm.get('For');
-
-    if (_for) _for[2] = true;
-}
-
-
-/**
- * For子元素引用存储&提取。
- * 存储时返回undefined。
- * @param  {Element} box For容器元素
- * @param  {Boolean} save 子元素引用存储
- * @return {[Element]|void} 子元素集
- */
-function forSubs( box, save ) {
-    if ( !save ) {
-        return box[ __forSubs ];
-    }
-    box[ __forSubs ] = [ ...box.children ];
-}
-
-
-/**
- * 清理子元素。
- * 移除多余的Each克隆元素以保持For规范。
- * 注记：
- * 子元素中的Each可能被单独更新，因此移除更可靠。
- * @param  {Element} box For容器元素
- * @param  {Boolean} each 子元素包含Each文法
- * @return {[Element]} 子元素集
- */
-function cleanEach( box, each ) {
-    if ( each ) {
-        for ( const el of $.children(box, __slrRender) ) {
-            if ( el[__eachIndex] > 0 ) {
-                $.remove(el);
-            }
-        }
-    }
-    return $.children( box );
-}
-
-
-/**
- * 循环克隆元素集。
- * 用于For循环中子元素集的迭代。
- * @param  {[Element]} els 源元素集
- * @param  {Number} cnt 克隆次数
- * @return {[Element]} 克隆总集
- */
-function forClone( els, cnt ) {
+function forList( subs, vals, data ) {
     let _buf = [];
 
-    for (let i=0; i<cnt; i++) {
-        _buf = _buf.concat( cloneList(els) );
+    for ( const [i, v] of vals.entries() ) {
+        _buf.push(
+            scopeElem( cloneList(subs), i, v, data )
+        );
     }
     return _buf;
 }
@@ -913,113 +808,89 @@ function loopCell( data, i, supObj ) {
 
 
 /**
- * 获取元素原始display样式。
- * 用于switch文法，因为可能被子元素last修改。
- * @param  {Element} el 目标元素
- * @return {String}
+ * 向后搜寻 Else/Elseif 文法元素并移除之。
+ * 紧邻的 If/Else/Elseif 文法视为一组，
+ * 不支持平级兄弟元素间的 If/If/Else/Else 类嵌套。
+ * @param {Element} beg 起点元素
  */
-function originStyle( el ) {
-    if ( el[__switchDisplay] === undefined ) {
-        el[__switchDisplay] = el.style.display;
-    }
-    return el[__switchDisplay];
-}
-
-
-/**
- * 元素是否隐藏。
- * 隐藏的元素无需向下继续渲染。
- * 来源：If/Else, Case/Last
- * @param  {Element} el 当前元素
- * @return {Boolean}
- */
-function hidden( el ) {
-    return el[__compState] === false;
-}
-
-
-/**
- * 隐藏元素。
- * 将目标元素插入一个临时的模板元素内，
- * 注意需要同时克隆元素自身的渲染配置。
- * @param {Element} el 目标元素
- */
-function hideElem( el ) {
-    let _tmp = $.attr(
-        $.elem('template'), HasRender, ''
-    );
-    $.append(
-        $.replace(el, _tmp).content, el
-    );
-    _tmp[__compState] = false;
-    // 文法保持。
-    Grammars.set( _tmp, Grammars.get(el) );
-}
-
-
-/**
- * 显示元素。
- * 将临时占位的模板元素用其内容替换回来。
- * 如果未被隐藏过，则为原始元素。
- * @param {Element} el 目标元素或占位元素
- */
-function showElem( el ) {
-    if ( hidden(el) ) {
-        $.replace( el, el.content.firstElementChild );
-    }
-    el[__compState] = true;
-}
-
-
-/**
- * 同级else判断是否显示。
- * 向前检索关联If/Elseif元素是否已显示（为真）。
- * @param  {Element} cur 当前元素
- * @return {Boolean}
- */
-function elseShow( cur ) {
+function detachElse( beg ) {
     let _gram;
 
-    for (const el of $.prevAll(cur, __slrRender)) {
-        _gram = Grammars.get(el);
+    for ( const el of $.nextAll(beg, __slrRender) ) {
+        _gram = __tmpGrams.get(el);
 
         if ( _gram.has('If') ) {
-            return !el[__compState];
+            break;
         }
-        if ( _gram.has('Else') && el[__compState] ) {
-            return false;
+        if ( _gram.has('Else') ) $.remove( el );
+    }
+}
+
+
+/**
+ * Case 移除。
+ * 向后搜寻 Case/Last 文法元素并移除之。
+ * @param {Element} beg 起点元素
+ */
+function detachCase( beg ) {
+    let _gram;
+
+    for ( const el of $.nextAll(beg, __slrRender) ) {
+        _gram = __tmpGrams.get(el);
+
+        if ( _gram.has('Switch') ) {
+            break;
+        }
+        if ( _gram.has('Else') || _gram.has('Last') ) {
+            $.remove( el );
         }
     }
-    throw new Error('Else not find previous If.');
 }
 
 
 /**
- * 同级case是否已执行。
- * @param  {Element} box Switch元素
- * @return {Boolean}
- */
-function caseShow( box ) {
-    return !box[__casePass];
-}
-
-
-/**
- * 渲染目标元素（单个）。
+ * 渲染目标元素。
  * 按规定的文法优先级渲染元素。
+ * 渲染完成后，可渲染标记（_）和渲染根标记属性会被清除。
+ * 注记：
+ * 如果直接对模板节点执行渲染，该节点将失去“模板”的功能。
+ * 因此el目标元素是一个源模板的克隆节点。
  * @param  {Element} el 目标元素
  * @param  {Object} data 数据源
+ * @param  {Object} gdata 根数据源
  * @return {Object|Array} 渲染后的当前域数据
  */
-function render( el, data ) {
-    let _gram = Grammars.get(el)
+function renderSelf( el, data, gdata ) {
+    let _gram = __tmpGrams.get( el )
 
     if ( _gram ) {
         for (const [fn, args] of _gram) {
-            Grammar[fn]( el, ...args, el[__scopeData] || data );
+            Grammar[fn]( el, ...args, el[__scopeData] || data, gdata );
         }
+        el.removeAttribute( __slrRender );
     }
+    el.removeAttribute( __Root );
+
     return el[__scopeData] || data;
+}
+
+
+/**
+ * 用源数据更新节点。
+ * 目标应当是tpb-root标记的元素的副本。
+ * @param  {Element} root 渲染根
+ * @param  {Object} data  源数据对象
+ * @param  {Object} gdata 全局源数据（根数据）
+ * @return {Element} root
+ */
+function update( root, data, gdata ) {
+    data = renderSelf( root, data, gdata );
+
+    // 利用 .children 动态更新特性
+    for (let i = 0; i < root.children.length; i++) {
+        update( root.children[i], data, gdata );
+    }
+    return root;
 }
 
 
@@ -1040,7 +911,7 @@ function parse( tpl ) {
     let _gram;
 
     for ( const el of $.find('*', tpl, true) ) {
-        _gram = Parser.grammar(el);
+        _gram = Parser.grammar( el );
 
         if ( _gram.size > 0 ) {
             Grammars.set( el, _gram );
@@ -1052,31 +923,56 @@ function parse( tpl ) {
 
 
 /**
- * 节点树渲染文法克隆。
- * 应当在 parse 之后使用，用于克隆源模板节点时。
+ * 执行渲染。
+ * 渲染目标el本身或其源模板必须标记过tpb-root（渲染根），
+ * 前者指页面DOM中既有的元素（非模板）。
+ * 会无条件克隆源模板的一个副本来执行渲染，即便目标本身就是一个模板。
+ * 也即：
+ * 渲染不会破坏源模板，用户无需预先克隆一个模板来渲染。
+ * 注记：
+ * 渲染目标仅用于检索其源模板节点，而非渲染目标本身。
+ * 渲染出的是由源模板克隆的一个新元素。
+ * 如果目标不是引用源模板本身，新元素会自动替换渲染目标。
+ *
+ * @param  {Element} el 渲染目标
+ * @param  {Object} data 渲染源数据
+ * @return {Element} 一个被渲染的已替换了渲染目标的新元素
  */
-const clone = cloneGrammar;
+function render( el, data ) {
+    let _tpl = __rootMap.get( el );
+
+    if ( !_tpl ) {
+        throw new Error( `Rendering is a non-[tpb-root] element.` );
+    }
+    // 根映射，便于渲染根引用。
+    let _new = rootMap(
+        _tpl,
+        $.clone( _tpl, true, true, true )
+    );
+    update( cloneGrammar(_tpl, _new, Grammars, __tmpGrams), data, data );
+
+    // 即时清理。
+    __tmpGrams.clear();
+
+    return _tpl !== el ? $.replace( el, _new ) : _new;
+}
 
 
 /**
- * 用源数据更新节点树。
- * 可用于页面中既有渲染元素的原地更新。
- * @param  {Element} root 渲染根
- * @param  {Object} data  源数据对象
- * @return {Element} root
+ * 模板渲染文法克隆。
+ * 应当仅用于模板内部的克隆逻辑（如tpl-node）。
+ * @param  {Element} src 源元素
+ * @param  {Element} to 目标元素
+ * @return {Element} to
  */
-function update( root, data ) {
-    data = render( root, data );
-
-    for (let i = 0; i < root.children.length; i++) {
-        update( root.children[i], data );
-    }
-    return root;
+function clone( src, to ) {
+    return cloneGrammar( src, to, Grammars, Grammars );
 }
 
 
 /**
  * 提取渲染文法配置。
+ * 注：主要用于调试查看渲染配置。
  * @param  {Element} el 目标元素
  * @return {Map}
  */
@@ -1085,4 +981,4 @@ function get( el ) {
 }
 
 
-export const Render = { parse, clone, update, get };
+export const Render = { parse, render, clone, get };

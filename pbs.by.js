@@ -30,7 +30,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
 
-import $ from "./config.js";
+import $, { TplsPool, TplrName } from "./config.js";
 import { bindMethod } from "./base.js";
 import { Get } from "./pbs.get.js";
 
@@ -40,16 +40,22 @@ import { Util } from "./tools/util.js";
 
 const _By = {
     /**
-     * 节点树渲染（单根）。
+     * 模板/节点树渲染。
      * 目标：暂存区/栈顶1项。
-     * 仅支持单个根元素，如果目标是多个元素则需要封装到一个容器内。
-     * 如果需要同一数据对多个元素分别渲染，可用To.Update:render。
-     * @data: Element
-     * @param  {Object|Value|[Value]} vals 渲染数据
+     * 仅支持单个根元素，需是tpb-root标记的元素或其副本。
+     * 提示：
+     * To.Update:render 支持用一份数据渲染多个节点根。
+     *
+     * @data: Object|Value|[Value] 渲染数据
+     * @param  {String|Element} to 渲染模板名或目标元素
+     * @param  {String} tname 模板管理器存储名，可选（仅在to为模板名时有用）
      * @return {Element} 被渲染节点
      */
-    render( evo, data ) {
-        return Render.update( evo.data, data );
+    render( evo, to, tname = TplrName ) {
+        if ( typeof to === 'string' ) {
+            to = TplsPool.get( tname ).get( to );
+        }
+        return Render.render( to, evo.data );
     },
 
     __render: 1,

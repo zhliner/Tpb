@@ -126,7 +126,7 @@ const
     // 更新方法调用模式，名称仅为简单单词。
     __toUpdate  = /^(\w+)(?:\(([^]*)\))?$/,
 
-    // 从流程中获取实参标记（key）。
+    // 从流程中获取实参的标记（key）。
     // 用于模板中的取值表达（最后一个实参）。
     __fromStack = {
         _:  Symbol(0),  // 取流程数据1项（展开）。
@@ -141,8 +141,12 @@ const
         _9: Symbol(9),  // ...
     },
 
-    // 流程数据取项数量映射。
-    // { Symbol(0):0, Symbol(1):1, ... }
+    // 流程数据取项数量映射：
+    // Object {
+    //  Symbol(0): 0,
+    //  Symbol(1): 1,
+    //  ......
+    // }
     __flowCnts = Object.keys(__fromStack)
     .reduce( (o, k) => (o[__fromStack[k]] = +k.substring(1), o), {} );
 

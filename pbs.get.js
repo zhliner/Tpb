@@ -666,14 +666,10 @@ const _Gets = {
 
 
     /**
-     * 单次克隆。
+     * 目标（集）单次克隆。
      * 目标：暂存区/栈顶1项。
-     * 如果目标上存在.clone方法，则调用该方法，
-     * 否则按元素（集）克隆。
+     * 如果目标上存在.clone方法，则调用该方法，否则按元素克隆。
      * 元素克隆参数：(event, deep, eventdeep)
-     * 注意：
-     * 克隆时是每次都克隆，这在需要重新渲染模板时会有用。
-     * 也可用于通用克隆，如从模板管理器克隆节点（含渲染语法克隆）。
      * @data: Object|Element|[Element]
      * @param  {Boolean} event 包含事件处理器，可选
      * @param  {Boolean} deep 深层克隆（含子元素），可选（默认true）
@@ -682,17 +678,16 @@ const _Gets = {
      */
     clone( evo, ...args ) {
         let x = evo.data;
-        return x.clone === 'function' ? x.clone( ...args ) : $mapCall( x, 'clone', ...args );
+        return typeof x.clone === 'function' ? x.clone( ...args ) : $mapCall( x, 'clone', ...args );
     },
 
     __clone: 1,
 
 
     /**
-     * 多次克隆。
+     * 元素（集）多次克隆。
      * 目标：暂存区/栈顶1项。
-     * 仅支持元素（集）克隆。
-     * 可选择同时克隆元素上绑定的事件处理器。
+     * 仅为元素克隆逻辑，支持元素上绑定的事件处理器克隆。
      * 始终返回一个数组。
      * @data: Element|[Element]
      * @param  {Number} cnt 克隆个数
@@ -960,29 +955,6 @@ const _Gets = {
     //-----------------------------------------------
 
     /**
-     * 获取模板节点。
-     * 目标：暂存区1项可选。
-     * 目标为模板管理器，仅在有多个模板系时才需要。
-     * 如果目标有值，优先于实参指定的模板管理器。
-     * 注意：
-     * 获取的模板节点为原始节点。
-     * 如果需要获取一个克隆版，使用.node()接口，或者：
-     *      tplr(tname) clone(name, bound)
-     * 注记：
-     * 因为返回Promise实例，所以注意avoid等操作应当在此之前。
-     * @data: Templater 模板管理器
-     * @param  {String} name 模板名
-     * @param  {String} tname 模板管理器存储名，可选
-     * @return {Promise<Element>}
-     */
-    tpl( evo, name, tname = TplrName ) {
-        return ( evo.data || TplsPool.get(tname) ).get( name );
-    },
-
-    __tpl: -1,
-
-
-    /**
      * 获取模板管理器。
      * 目标：无。
      * 无参数时默认获取本系模板管理器。
@@ -1001,6 +973,27 @@ const _Gets = {
 
 
     /**
+     * 获取模板节点。
+     * 目标：暂存区1项可选。
+     * 目标为模板管理器，仅在有多个模板系时才需要。
+     * 如果目标有值，优先于实参指定的模板管理器（通过名称引用）。
+     * 注意：
+     * 获取的模板节点为原始节点，如果需要克隆，可用 .clone() 接口。
+     * 提示：
+     * 因为返回Promise实例，所以注意avoid等操作应当在此之前定义。
+     * @data: Templater 模板管理器
+     * @param  {String} name 模板名（单个）
+     * @param  {String} tname 模板管理器存储名，可选
+     * @return {Promise<Element>}
+     */
+    tpl( evo, name, tname = TplrName ) {
+        return ( evo.data || TplsPool.get(tname) ).get( name );
+    },
+
+    __tpl: -1,
+
+
+    /**
      * 获取模板节点（集）。
      * 目标：暂存区1项可选。
      * 与上面的 .tpl 不同，直接返回节点元素而不是一个承诺。
@@ -1010,20 +1003,19 @@ const _Gets = {
      * 用户请求节点时应当知道节点载入情况，节点预先载入有3种方式：
      * 1. 在主页面中通过隐藏的tpl-source或tpl-node预先载入。
      * 2. 其它先构建（Tpb.build）的模板导致节点已经自动载入。
-     * 3. 主动使用tpl载入单个节点，于是与该节点定义在同一文件中的其它节点就会自动载入。
+     * 3. 主动使用tpl载入单个节点，于是与该节点定义在同一文件中的其它节点也会自动载入。
      * @data: Templater 模板管理器
      * @param  {String} name 模板名/序列
-     * @param  {Boolean} clone 是否克隆
-     * @param  {Boolean} bound 克隆包含绑定的事件处理器，可选
+     * @param  {String} tname 模板管理器存储名，可选
      * @return {Element|null|[Element|null]}
      */
-    node( evo, name, clone, bound ) {
-        let _tr = evo.data || TplsPool.get( TplrName );
+    node( evo, name, tname = TplrName ) {
+        let _tr = evo.data || TplsPool.get( tname );
 
         if ( __reSpace.test(name) ) {
-            return name.split( __reSpace ).map( n => _tr.node(n, clone, bound) );
+            return name.split( __reSpace ).map( n => _tr.node(n) );
         }
-        return _tr.node( name, clone, bound );
+        return _tr.node( name );
     },
 
     __node: -1,

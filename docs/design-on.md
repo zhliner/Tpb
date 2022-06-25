@@ -194,13 +194,13 @@ Set( n:Number ): Set
 // 复杂取值。
 //-----------------------------------------------
 
-tpl( name, tname?:String ): Promise<Element>
-// 获取name模板节点。
-
 tplr( name:String ): Templater
 // 获取模板管理器实例
 
-node( name:String, clone?, bound?:Boolean ): Element | [Element|null] | null
+tpl( name, tname?:String ): Promise<Element>
+// 获取name模板节点。
+
+node( name, tname?:String ): Element | [Element|null] | null
 // 获取模板节点（集）。
 
 keys(): [Value]

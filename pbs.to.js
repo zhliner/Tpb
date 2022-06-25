@@ -298,9 +298,9 @@ const _Update = {
      */
     render( to, data ) {
         if ( $.isArray(to) ) {
-            return to.forEach( el => Render.update(el, data) );
+            return to.forEach( el => Render.render(el, data) );
         }
-        Render.update( to, data );
+        Render.render( to, data );
     },
 
 

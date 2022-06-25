@@ -99,6 +99,24 @@ class Templater {
 
 
     /**
+     * 返回既有模板节点。
+     * 需确信模板节点已经添加到内部存储，
+     * 并且该节点的内部子节点已经就绪（tpl-node|source 完成）。
+     * @param  {String} name 节点名
+     * @return {Element|null}
+     */
+    node( name ) {
+        let _tpl = this._tpls.get( name );
+
+        if ( !_tpl ) {
+            window.console.warn( `[${name}] template not found.` );
+            return null;
+        }
+        return _tpl;
+    }
+
+
+    /**
      * 克隆模板节点。
      * 如果模板不存在，会自动尝试载入。
      * 克隆包含渲染文法。
@@ -108,27 +126,6 @@ class Templater {
      */
     clone( name, bound ) {
         return this.get( name ).then( el => this._clone(el, bound) );
-    }
-
-
-    /**
-     * 返回既有模板节点或其副本。
-     * 需确信模板节点已经添加到内部存储，
-     * 并且该节点的内部子节点已经就绪（tpl-node|source 完成）。
-     * 注：bound 仅在 clone 为真时有意义。
-     * @param  {String} name 节点名
-     * @param  {Boolean} clone 是否克隆（含渲染文法），可选
-     * @param  {Boolean} bound 克隆包含绑定的事件处理器，可选
-     * @return {Element|null}
-     */
-    node( name, clone, bound ) {
-        let _tpl = this._tpls.get( name );
-
-        if ( !_tpl ) {
-            window.console.warn( `[${name}] template not found.` );
-            return null;
-        }
-        return clone ? this._clone( _tpl, bound ) : _tpl;
     }
 
 
