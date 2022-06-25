@@ -867,7 +867,7 @@ function renderSelf( el, data, gdata ) {
         for (const [fn, args] of _gram) {
             Grammar[fn]( el, ...args, el[__scopeData] || data, gdata );
         }
-        el.removeAttribute( __slrRender );
+        el.removeAttribute( HasRender );
     }
     el.removeAttribute( __Root );
 
@@ -918,7 +918,7 @@ function parse( tpl ) {
             el.setAttribute( HasRender, '' );
         }
     }
-    return tpl;
+    return rootMap( tpl );
 }
 
 
