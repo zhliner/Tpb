@@ -830,6 +830,10 @@ function detachElse( beg ) {
 /**
  * Case 移除。
  * 向后搜寻 Case/Last 文法元素并移除之。
+ * 各个平级 Case/Last 元素并不需要连续，其间可以自由定义其它渲染文法。
+ * 注记：
+ * 因为 Case/Last 是 Switch 容器的子元素，所以一个容器内只有一组 Case/Last。
+ * 但这并不影响在子元素内定义新的 Switch 或其它文法。
  * @param {Element} beg 起点元素
  */
 function detachCase( beg ) {
@@ -838,10 +842,7 @@ function detachCase( beg ) {
     for ( const el of $.nextAll(beg, __slrRender) ) {
         _gram = __tmpGrams.get(el);
 
-        if ( _gram.has('Switch') ) {
-            break;
-        }
-        if ( _gram.has('Else') || _gram.has('Last') ) {
+        if ( _gram.has('Case') || _gram.has('Last') ) {
             $.remove( el );
         }
     }
