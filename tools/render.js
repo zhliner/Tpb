@@ -182,7 +182,7 @@ const Parser = {
 
 
     /**
-     * Each文法解析。
+     * 自迭代文法解析。
      * Each: [handle]
      * @param  {Map} map 存储集
      * @param  {String} val 属性值
@@ -197,7 +197,7 @@ const Parser = {
 
 
     /**
-     * For文法解析。
+     * 循环文法解析。
      * For: [handle]
      * @param  {Map} map 存储集
      * @param  {String} val 属性值
@@ -212,7 +212,7 @@ const Parser = {
 
 
     /**
-     * With文法解析。
+     * with文法解析。
      * With: [handle]
      * @param  {Map} map 存储集
      * @param  {String} val 属性值
@@ -227,7 +227,7 @@ const Parser = {
 
 
     /**
-     * Var文法解析。
+     * var文法解析。
      * Var: [handle]
      * @param  {Map} map 存储集
      * @param  {String} val 属性值
@@ -242,7 +242,7 @@ const Parser = {
 
 
     /**
-     * If文法解析。
+     * if文法解析。
      * If: [handle]
      * @param  {Map} map 存储集
      * @param  {String} val 属性值
@@ -257,9 +257,9 @@ const Parser = {
 
 
     /**
-     * Else文法解析。
+     * else|elseif 文法解析。
      * 如果包含条件测试，则为 elseif 逻辑。
-     * Else: [handle|pass, elseif]
+     * Else: [handle|null]
      * @param  {Map} map 存储集
      * @param  {String} val 属性值
      * @return {Map} map
@@ -267,13 +267,13 @@ const Parser = {
     $else( map, val ) {
         return map.set(
             'Else',
-            [ val ? Expr.value(val) : Expr.pass(), !!val ]
+            [ val ? Expr.value(val) : null ]
         );
     },
 
 
     /**
-     * Switch文法解析。
+     * switch文法解析。
      * Switch: [handle]
      * @param  {Map} map 存储集
      * @param  {String} val 属性值
@@ -288,7 +288,7 @@ const Parser = {
 
 
     /**
-     * Case文法解析。
+     * case文法解析。
      * Case: [handle]
      * @param  {Map} map 存储集
      * @param  {String} val 属性值
@@ -303,7 +303,7 @@ const Parser = {
 
 
     /**
-     * case/default 文法解析。
+     * case|default 文法解析。
      * Last: [handle|null]
      * @param  {Map} map 存储集
      * @param  {String} val 属性值
@@ -449,20 +449,18 @@ const Grammar = {
 
     /**
      * Else/Elseif 逻辑。
-     * 如果为 Elseif 逻辑，向后检索处理同 If 文法。
-     * 如果是单纯的 Else，则原地保持即可（无行为）。
-     * 文法实参：[handle, elseif]
+     * 如果 handle 非假即为 Elseif 逻辑，向后检索处理同 If 文法。
+     * 否则即为单纯的 Else，则原地保持即可（无行为）。
+     * 文法实参：[handle|null]
      * @param {Element} el 当前元素
      * @param {Function} handle 表达式函数
-     * @param {Boolean} cond 是否包含条件判断（elseif）
      * @param {Object} data 当前域数据
      * @param {Object} gdata 根数据源对象
      */
-    Else( el, handle, cond, data, gdata ) {
-        if ( handle(data, gdata) ) {
-            return cond && detachElse( el );
+    Else( el, handle, data, gdata ) {
+        if ( handle ) {
+            handle( data, gdata ) ? detachElse( el ) : $.remove( el );
         }
-        $.remove( el ); // 必然为 elseif
     },
 
 
@@ -583,16 +581,6 @@ const Expr = {
             return v => v;
         }
         return new Function( '$', '$$', `return ${expr};` );
-    },
-
-
-    /**
-     * 简单通过。
-     * 适用：tpb-else 无值的情况。
-     * @return function(): true
-     */
-    pass() {
-        return () => true;
     },
 
 
