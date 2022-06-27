@@ -30,7 +30,7 @@
 //  __tmpGrams:{Map}        渲染时即时克隆元素的文法存储，临时空间（用完清空）
 //
 //  渲染：
-//  1. 找到渲染目标（tpb-root）的源模板节点（__rootMap）。
+//  1. 找到渲染目标（tpb-top）的源模板节点（__rootMap）。
 //  2. 克隆源模板节点，包括其上的事件处理器和渲染文法，后者存储在__Grammars中。
 //  3. 对克隆的新元素执行渲染。
 //  4. 如果可以（目标非源模板引用），新元素替换渲染目标。
@@ -81,7 +81,7 @@ const
     __Case      = 'tpb-case',       // switch/case
     __Last      = 'tpb-last',       // switch/last（含 default）
     __For       = 'tpb-for',        // 子元素循环
-    __Root      = 'tpb-root';       // 渲染根元素标记
+    __Root      = 'tpb-top';        // 渲染根元素标记
 
 
 const
@@ -913,16 +913,12 @@ function parse( tpl ) {
 
 /**
  * 执行渲染。
- * 渲染目标el本身或其源模板必须标记过tpb-root（渲染根），
- * 前者指页面DOM中既有的元素（非模板）。
+ * 渲染目标el本身或其源模板必须标记过tpb-top（渲染根）。
  * 会无条件克隆源模板的一个副本来执行渲染，即便目标本身就是一个模板。
  * 也即：
  * 渲染不会破坏源模板，用户无需预先克隆一个模板来渲染。
  * 注记：
- * 渲染目标仅用于检索其源模板节点，而非渲染目标本身。
- * 渲染出的是由源模板克隆的一个新元素。
- * 如果目标不是引用源模板本身，新元素会自动替换渲染目标。
- *
+ * 渲染目标仅用于检索其源模板节点，实际渲染的是源模板的一个副本。
  * @param  {Element} el 渲染目标
  * @param  {Object} data 渲染源数据
  * @return {Element} 一个被渲染的已替换了渲染目标的新元素
@@ -931,7 +927,7 @@ function render( el, data ) {
     let _tpl = __rootMap.get( el );
 
     if ( !_tpl ) {
-        throw new Error( `Rendering is a non-[tpb-root] element.` );
+        throw new Error( `[tpb-top] element not found.` );
     }
     // 根映射，便于渲染根引用。
     let _new = rootMap(
@@ -943,7 +939,7 @@ function render( el, data ) {
     // 即时清理。
     __tmpGrams.clear();
 
-    return _tpl !== el ? $.replace( el, _new ) : _new;
+    return $.replace( el, _new );
 }
 
 

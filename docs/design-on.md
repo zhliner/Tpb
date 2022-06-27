@@ -78,9 +78,6 @@ evo( name:String|Number ): Value
 ev( name?:String ): Value|[Value]
 // 从事件对象上取值入栈。
 
-its( name:String ): Value|[Value]
-// 获取对象成员值。
-
 len(): Number
 // 获取数据值长度。
 
@@ -141,17 +138,8 @@ arr( wrap:Boolean ): Array
 obj( key:String ): Object
 // 将目标转换为普通对象。
 
-objz(): Object
-// 转换.entries接口对象。
-
 array( size, ...vals ): Array
 // 创建预填充值数组（size大小）。
-
-arr2j( junk ): [Value]
-// 用状态数组清理目标数组。
-
-obj2x( target:Object, names?:String ): Object
-// 对象属性提取赋值。
 
 elem( tag:String, n:Number ): Element | Collector
 // 简单创建元素（集）。
@@ -193,6 +181,18 @@ Set( n:Number ): Set
 
 // 复杂取值。
 //-----------------------------------------------
+
+its( name:String ): Value|[Value]|[[Value]]
+// 获取对象成员值。
+
+arr2j( junk ): [Value]
+// 用状态数组清理目标数组。
+
+objz(): Object
+// 转换.entries接口对象。
+
+obj2x( target:Object, names?:String ): Object
+// 对象属性提取赋值。
 
 tplr( name:String ): Templater
 // 获取模板管理器实例

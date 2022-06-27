@@ -290,17 +290,21 @@ const _Update = {
 
     /**
      * 渲染目标元素/集。
-     * 如果目标是多个元素，它们采用相同的源数据渲染。
-     * 目标元素可能不是模板根元素，此时为局部渲染。
+     * 多目标时：
+     * - 默认用相同的数据渲染目标元素集。
+     * - 传递each为真，用源数据数组成员分别渲染目标（位置对应）。
+     * 注意：
+     * 如果传递each为真，即便单个目标也是有效的（取源数据[0]号成员）。
      * @param  {Element|Collector} to 目标元素/集
      * @param  {Object|Array} data 内容：渲染源数据
+     * @param  {Boolean} each 源数据各别渲染，可选
      * @return {void}
      */
-    render( to, data ) {
+    render( to, data, each ) {
         if ( $.isArray(to) ) {
-            return to.forEach( el => Render.render(el, data) );
+            return to.forEach( (el, i) => Render.render(el, each ? data[i] : data) );
         }
-        Render.render( to, data );
+        Render.render( to, each ? data[0] : data );
     },
 
 

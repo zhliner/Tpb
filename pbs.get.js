@@ -207,24 +207,6 @@ const _Gets = {
 
 
     /**
-     * 获取目标的成员值。
-     * 目标：暂存区/栈顶1项。
-     * name支持空格分隔的多个名称，返回一个值数组。
-     * 单个名称时返回一个值。
-     * 如果目标是一个数组且取多个值，返回的将是一个二维数组。
-     * 注：数值名称适用数组。
-     * @data: Object|[Object]
-     * @param  {String|Number} names 名称（序列）
-     * @return {Value|[Value]|[[Value]]}
-     */
-    its( evo, names ) {
-        return mapCall( evo.data, o => namesValue(names+'', o) );
-    },
-
-    __its: 1,
-
-
-    /**
      * 获取数据长度。
      * 目标：暂存区/栈顶1项。
      * 目标可能是数组、字符串或类数组。
@@ -563,18 +545,6 @@ const _Gets = {
 
 
     /**
-     * 特殊转换：
-     * 将支持.entries接口的对象（如Set/Map）转换为普通对象。
-     * @return {Object}
-     */
-    objz( evo ) {
-        return Object.fromEntries( evo.data );
-    },
-
-    __objz: 1,
-
-
-    /**
      * 创建预填充值数组。
      * 目标：暂存区/栈顶1项。
      * 目标为基准数组，如果不是数组会自动封装为数组。
@@ -597,47 +567,6 @@ const _Gets = {
     },
 
     __array: 1,
-
-
-    /**
-     * 用状态数组清理数组。
-     * 目标：暂存区/栈顶1项。
-     * 用依据数组的成员判断目标数组的相应成员是否保留。
-     * 真值保留，假值去除。
-     * 注记：
-     * 这在根据表单控件状态提取另一组值时很有用。
-     * @data: [Value] 目标数组
-     * @param  {[Boolean]} junk 判断集
-     * @return {Value} 结果数组
-     */
-    arr2j( evo, junk ) {
-        return evo.data.filter( (_, i) => !!junk[i] );
-    },
-
-    __arr2j: 1,
-
-
-    /**
-     * 对象属性提取/合并。
-     * 目标：暂存区/栈顶1项。
-     * 目标作为提供属性值的数据源对象。
-     * 支持由空格分隔的多名称限定，空名称匹配全部属性（含Symbol）。
-     * 注：属性仅限于对象自身（非继承）的可枚举属性。
-     * @data: Object => Object
-     * @param  {Object} to 接收对象
-     * @param  {String} names 取名称序列，可选
-     * @return {Object}
-     */
-    obj2x( evo, to, names ) {
-        if ( !names ) {
-            return Object.assign( to, evo.data );
-        }
-        let _ns = new Set( names.split(__reSpace) );
-
-        return $.assign( to, evo.data, (v, n) => _ns.has(n) && [v] );
-    },
-
-    __obj2x: 1,
 
 
     /**
@@ -712,17 +641,17 @@ const _Gets = {
 
     /**
      * 集合成员提取。
+     * 默认为对象或数组中单个属性/下标取值。
      * 如果是Collector实例，无实参传递时返回一个原生数组。
      * 注意：
      * undefined会自动转换为null入栈，通常这是因为下标越界所致。
-     * @data 可迭代集合（Array|Map|Set...）
-     * @param  {Number} idx 位置下标
+     * @data Array|Object
+     * @param  {Number|String} idx 位置下标或键名称
      * @return {Value|[Value]|null}
      */
     item( evo, idx ) {
         let x = evo.data,
-            // 对数组友好
-            v = ($.isArray(x) && !$.isCollector(x)) ? x[idx] : $(x).item(idx);
+            v = $.isCollector( x ) ? x.item( idx ) : x[ idx ];
 
         return v === undefined ? null : v;
     },
@@ -953,6 +882,79 @@ const _Gets = {
 
     // 复杂取值。
     //-----------------------------------------------
+
+
+    /**
+     * 获取目标的成员值。
+     * 目标：暂存区/栈顶1项。
+     * name支持空格分隔的多个名称，返回一个值数组。
+     * 单个名称时返回一个值。
+     * 如果目标是一个数组且取多个值，返回的将是一个二维数组。
+     * 注：数字名称可适用数组。
+     * @data: Object|[Object]
+     * @param  {String|Number} names 名称（序列）
+     * @return {Value|[Value]|[[Value]]}
+     */
+    its( evo, names ) {
+        return mapCall( evo.data, o => namesValue(names+'', o) );
+    },
+
+    __its: 1,
+
+
+    /**
+     * 用状态数组清理数组。
+     * 目标：暂存区/栈顶1项。
+     * 用依据数组的成员判断目标数组的相应成员是否保留。
+     * 真值保留，假值去除。
+     * 注记：
+     * 这在根据表单控件状态提取另一组值时很有用。
+     * @data: [Value] 目标数组
+     * @param  {[Boolean]} junk 判断集
+     * @return {[Value]} 结果数组
+     */
+    arr2j( evo, junk ) {
+        return evo.data.filter( (_, i) => !!junk[i] );
+    },
+
+    __arr2j: 1,
+
+
+    /**
+     * 特殊转换：
+     * 将支持.entries接口的对象（如Set/Map）转换为普通对象。
+     * @data: {.entries}
+     * @return {Object}
+     */
+    objz( evo ) {
+        return Object.fromEntries( evo.data );
+    },
+
+    __objz: 1,
+
+
+    /**
+     * 对象属性提取/合并。
+     * 目标：暂存区/栈顶1项。
+     * 目标作为提供属性值的数据源对象。
+     * 支持由空格分隔的多名称限定，空名称匹配全部属性（含Symbol）。
+     * 注：属性仅限于对象自身（非继承）的可枚举属性。
+     * @data: Object => Object
+     * @param  {Object} to 接收对象
+     * @param  {String} names 取名称序列，可选
+     * @return {Object}
+     */
+    obj2x( evo, to, names ) {
+        if ( !names ) {
+            return Object.assign( to, evo.data );
+        }
+        let _ns = new Set( names.split(__reSpace) );
+
+        return $.assign( to, evo.data, (v, n) => _ns.has(n) && [v] );
+    },
+
+    __obj2x: 1,
+
 
     /**
      * 获取模板管理器。

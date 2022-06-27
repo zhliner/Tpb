@@ -196,8 +196,8 @@ cloneEvents( evns:String|Function ): void
 // 其它赋值。
 /////////////////////////////////////////////////
 
-render(): void
-// 渲染目标元素。
+render( each ): void
+// 渲染目标元素（集）。
 
 set( name ): void
 // 设置对象成员值。
