@@ -21,7 +21,7 @@
 //      _[attr]             属性赋值（系列）
 //  }
 //  另：
-//  tpb-root标记渲染根节点（即便是模板根，如果需要从它开始渲染，也需要标记）。
+//  tpb-top标记渲染根节点（即便是模板根，如果需要从它开始渲染，也需要标记）。
 //
 //
 //  结构：
@@ -64,7 +64,10 @@ const
     // 附：
     // 调用处理：handle( ...args[1:] )
     //
-    Grammars = new WeakMap();
+    Grammars = new WeakMap(),
+
+    // 渲染完成后的通知事件名。
+    Rendered = "rendered";
 
 
 //
@@ -127,7 +130,7 @@ const
     __tmpGrams = new Map(),
 
     // 渲染根模板映射。
-    // 即tpb-root标记的元素（副本）对源模板的映射。
+    // 即tpb-top标记的元素（副本）对源模板的映射。
     // {new:Element => src:Element}
     __rootMap = new WeakMap();
 
@@ -530,7 +533,7 @@ const Grammar = {
     /**
      * 特性赋值。
      * 特性名集和处理器集成员一一对应。
-     * 支持两个特殊特性名：text, html。
+     * 支持两个特殊特性名：text（默认）和 html。
      * 文法实参：[[name], [handle]]
      * @param {[String]} names 属性名集
      * @param {[Function]} handles 处理器集
@@ -658,7 +661,7 @@ function cloneGrammar( src, to, srcbuf, tobuf ) {
 
 /**
  * 检查并创建渲染根映射。
- * 如果el有值，应当是tpl的克隆版（DOM结构相同）。
+ * 如果to有值，应当是tpl的克隆版（DOM结构相同）。
  * 目标节点也可能就是模板节点自身，这在模板初始解析时有用。
  * 模板节点也可能是一个克隆副本而不是初始源模板。
  * 注记：
@@ -865,8 +868,8 @@ function renderSelf( el, data, gdata ) {
 
 
 /**
- * 用源数据更新节点。
- * 目标应当是tpb-root标记的元素的副本。
+ * 用源数据更新节点树。
+ * 目标应当是tpb-top标记的元素的副本。
  * @param  {Element} root 渲染根
  * @param  {Object} data  源数据对象
  * @param  {Object} gdata 全局源数据（根数据）
@@ -939,7 +942,11 @@ function render( el, data ) {
     // 即时清理。
     __tmpGrams.clear();
 
-    return $.replace( el, _new );
+    // 完成节点树渲染后发送一个通知。
+    // 事件无数据，不冒泡，可取消。
+    $.trigger( $.replace(el, _new), Rendered )
+
+    return _new
 }
 
 
